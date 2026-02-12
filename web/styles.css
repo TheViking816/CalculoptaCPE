@@ -71,6 +71,16 @@ button[disabled] { opacity: .6; cursor: wait; }
   background: #e6edf5;
   color: #123255;
 }
+.button-link {
+  display: inline-block;
+  text-decoration: none;
+  border: 0;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 16px;
+}
 .small {
   font-size: 13px;
   margin-top: 10px;

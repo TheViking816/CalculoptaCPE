@@ -6,6 +6,7 @@ const resultBox = document.getElementById('result');
 const submitBtn = document.getElementById('submit');
 const copyBookmarkletBtn = document.getElementById('copy-bookmarklet');
 const copyScriptBtn = document.getElementById('copy-script');
+const pasteSnapshotBtn = document.getElementById('paste-snapshot');
 
 function setStatus(msg) {
   statusBox.textContent = msg || '';
@@ -311,7 +312,7 @@ form.addEventListener('submit', async (ev) => {
 copyScriptBtn.addEventListener('click', async () => {
   try {
     await copyText(buildExtractorScript());
-    setStatus('Script extractor copiado. Pegalo en la consola del navegador dentro del chapero.');
+    setStatus('Script copiado. En el portal: F12 -> Consola -> pegar -> Enter. Luego vuelve y pulsa "Pegar JSON del portapapeles".');
   } catch (err) {
     setStatus('No se pudo copiar: ' + err.message);
   }
@@ -320,8 +321,20 @@ copyScriptBtn.addEventListener('click', async () => {
 copyBookmarkletBtn.addEventListener('click', async () => {
   try {
     await copyText('javascript:' + buildExtractorScript());
-    setStatus('Bookmarklet copiado. Crea un marcador y pega esa URL en el campo URL.');
+    setStatus('Bookmarklet copiado. Guardalo como marcador y ejecútalo dentro de la pagina del chapero.');
   } catch (err) {
     setStatus('No se pudo copiar: ' + err.message);
+  }
+});
+
+pasteSnapshotBtn.addEventListener('click', async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!text || !text.trim()) throw new Error('Portapapeles vacio');
+    JSON.parse(text);
+    snapshotInput.value = text;
+    setStatus('JSON pegado automaticamente.');
+  } catch (err) {
+    setStatus('No se pudo pegar automatico: ' + err.message);
   }
 });

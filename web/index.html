@@ -13,6 +13,11 @@
       <p class="muted">Cada usuario usa su propia sesion del portal. No requiere backend ni pago.</p>
 
       <form id="calc-form" class="form">
+        <div class="tools">
+          <a class="button-link" href="https://portal.cpevalencia.com/" target="_blank" rel="noopener noreferrer">1) Abrir portal CPE</a>
+          <button id="paste-snapshot" type="button" class="secondary">2) Pegar JSON del portapapeles</button>
+        </div>
+
         <label for="snapshot">Snapshot JSON del chapero</label>
         <textarea id="snapshot" name="snapshot" rows="8" placeholder='{"doors":{"LAB":"7...."},"ordered":[...]}' required></textarea>
 
@@ -27,9 +32,7 @@
         <button id="copy-script" type="button" class="secondary">Copiar script extractor</button>
       </div>
 
-      <p class="muted small">
-        Flujo: 1) entra al portal y abre "Chapero por especialidades", 2) ejecuta extractor, 3) pega el JSON aqui, 4) calcula.
-      </p>
+      <p class="muted small">Flujo rapido: abrir portal, ir a chapero, ejecutar extractor, volver aqui y calcular.</p>
 
       <div id="status" class="status"></div>
       <div id="result"></div>
