@@ -20,6 +20,17 @@ Reglas aplicadas:
 - Abre `http://localhost:3088`
 - Introduce la chapa y pulsa calcular.
 
+## Modo gratis (sin backend, deploy en Vercel)
+Este repo incluye una web cliente en `web/` que funciona sin servidor:
+1. Cada usuario abre el portal CPE con su propia sesion.
+2. Ejecuta el extractor (bookmarklet o script) para copiar un snapshot JSON.
+3. Pega ese JSON en la web publicada y calcula.
+
+Deploy en Vercel:
+- Importa este repo.
+- Vercel usara `vercel.json` para servir solo `web/index.html`, `web/main.js` y `web/styles.css`.
+- URL publica esperada: `https://tu-proyecto.vercel.app/`
+
 ## CLI
 - `npm run cli -- --chapa 2683 --manual`
 

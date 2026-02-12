@@ -3,26 +3,33 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Distancia Chapero</title>
+  <title>Distancia Chapero (Cliente)</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <main class="page">
     <section class="card">
-      <h1>Calculadora de Puerta</h1>
-      <p class="muted">Distancia en orden de chapero contando solo chapas no contratadas (gris).</p>
+      <h1>Calculadora CPE sin servidor</h1>
+      <p class="muted">Cada usuario usa su propia sesion del portal. No requiere backend ni pago.</p>
 
       <form id="calc-form" class="form">
+        <label for="snapshot">Snapshot JSON del chapero</label>
+        <textarea id="snapshot" name="snapshot" rows="8" placeholder='{"doors":{"LAB":"7...."},"ordered":[...]}' required></textarea>
+
         <label for="chapa">Chapa usuario</label>
         <input id="chapa" name="chapa" type="text" inputmode="numeric" placeholder="2683 o 72683" required>
 
-        <label class="checkline">
-          <input id="manual" name="manual" type="checkbox">
-          <span>Modo manual (yo abro el chapero antes de calcular)</span>
-        </label>
-
         <button id="submit" type="submit">Calcular</button>
       </form>
+
+      <div class="tools">
+        <button id="copy-bookmarklet" type="button" class="secondary">Copiar bookmarklet extractor</button>
+        <button id="copy-script" type="button" class="secondary">Copiar script extractor</button>
+      </div>
+
+      <p class="muted small">
+        Flujo: 1) entra al portal y abre "Chapero por especialidades", 2) ejecuta extractor, 3) pega el JSON aqui, 4) calcula.
+      </p>
 
       <div id="status" class="status"></div>
       <div id="result"></div>
