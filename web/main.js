@@ -72,6 +72,22 @@ function normalizeSnapshot(snapshotRaw) {
   return { doors, ordered };
 }
 
+function parseSnapshotText(rawText) {
+  const text = String(rawText || '').trim();
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start < 0 || end < 0 || end <= start) {
+    throw new Error('No se detecto un JSON valido en el texto pegado.');
+  }
+
+  const candidate = text.slice(start, end + 1);
+  try {
+    return JSON.parse(candidate);
+  } catch (_err) {
+    throw new Error('JSON invalido. Asegurate de pegar solo el snapshot del extractor.');
+  }
+}
+
 function calculateDoorDistances(userChapa, snapshot) {
   const userNorm = normalizeChapa(userChapa);
   if (!userNorm) throw new Error('Chapa de usuario invalida.');
@@ -297,7 +313,7 @@ form.addEventListener('submit', async (ev) => {
   submitBtn.disabled = true;
 
   try {
-    const parsed = JSON.parse(snapshotInput.value.trim());
+    const parsed = parseSnapshotText(snapshotInput.value);
     const snapshot = normalizeSnapshot(parsed);
     const data = calculateDoorDistances(chapaInput.value.trim(), snapshot);
     renderResult(data);
@@ -331,8 +347,8 @@ pasteSnapshotBtn.addEventListener('click', async () => {
   try {
     const text = await navigator.clipboard.readText();
     if (!text || !text.trim()) throw new Error('Portapapeles vacio');
-    JSON.parse(text);
-    snapshotInput.value = text;
+    const parsed = parseSnapshotText(text);
+    snapshotInput.value = JSON.stringify(parsed);
     setStatus('JSON pegado automaticamente.');
   } catch (err) {
     setStatus('No se pudo pegar automatico: ' + err.message);
