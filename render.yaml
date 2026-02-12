@@ -5,3 +5,14 @@ services:
     plan: starter
     healthCheckPath: /api/health
     autoDeploy: true
+    envVars:
+      - key: PLAYWRIGHT_HEADLESS
+        value: "true"
+      - key: PLAYWRIGHT_CHANNEL
+        value: "none"
+      - key: AUTH_PROFILE_DIR
+        value: /app/.auth/chrome-profile
+    disk:
+      name: auth-data
+      mountPath: /app/.auth
+      sizeGB: 1
