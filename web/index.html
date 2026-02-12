@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Distancia Chapero</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="page">
+    <section class="card">
+      <h1>Calculadora de Puerta</h1>
+      <p class="muted">Distancia en orden de chapero contando solo chapas no contratadas (gris).</p>
+
+      <form id="calc-form" class="form">
+        <label for="chapa">Chapa usuario</label>
+        <input id="chapa" name="chapa" type="text" inputmode="numeric" placeholder="2683 o 72683" required>
+
+        <label class="checkline">
+          <input id="manual" name="manual" type="checkbox">
+          <span>Modo manual (yo abro el chapero antes de calcular)</span>
+        </label>
+
+        <button id="submit" type="submit">Calcular</button>
+      </form>
+
+      <div id="status" class="status"></div>
+      <div id="result"></div>
+    </section>
+  </main>
+  <script src="/main.js"></script>
+</body>
+</html>

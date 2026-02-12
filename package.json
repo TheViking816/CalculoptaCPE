@@ -1,0 +1,16 @@
+{
+  "name": "calculoptachapero",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Calcula distancia de una chapa a puertas del chapero CPE Valencia",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "cli": "node src/main.js",
+    "login": "node src/login.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "playwright": "^1.51.1"
+  }
+}

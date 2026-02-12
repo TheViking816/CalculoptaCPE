@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CPE Distancia Puertas</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <h1>CPE Distancia Puertas</h1>
+    <p class="muted">Calcula por orden real del censo y cuenta solo chapas grises entre puerta y usuario.</p>
+
+    <label for="chapa">Chapa usuario</label>
+    <input id="chapa" type="text" inputmode="numeric" placeholder="2683 o 72683" />
+    <button id="calc">Calcular</button>
+
+    <p id="status" class="status"></p>
+    <div id="out"></div>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>
