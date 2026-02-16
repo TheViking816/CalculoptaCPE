@@ -387,12 +387,44 @@ function buildSalaryExtractScript() {
   }
 
   function monthYearFromText(text) {
-    const m = normalizeText(text).match(/JORNALES\s+DE\s+([A-Z]+)\s+DE\s+(\d{4})/);
+    const n = normalizeText(text);
+    let m = n.match(/JORNALES\s+DE\s+([A-Z]+)\s+DE\s+(\d{4})/);
+    if (!m) m = n.match(/PRIMAS\s+DE\s+([A-Z]+)\s+DE\s+(\d{4})/);
     if (!m) return null;
     const month = MONTHS[m[1]];
     const year = Number(m[2]);
     if (!month || Number.isNaN(year)) return null;
-    return { month, year };
+    return { month, year, source: 'title' };
+  }
+
+  function monthYearFromDateWidget(text) {
+    const m = String(text || '').match(/\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](20\d{2})\b/);
+    if (!m) return null;
+    const month = Number(m[2]);
+    const year = Number(m[3]);
+    if (!month || month < 1 || month > 12 || Number.isNaN(year)) return null;
+    return { month, year, source: 'widget' };
+  }
+
+  function resolveMonthYear(doc) {
+    const bodyText = (doc && doc.body && doc.body.innerText) || '';
+
+    const fromTitle = monthYearFromText(bodyText);
+    if (fromTitle) return fromTitle;
+
+    try {
+      const rootText = (window.top && window.top.document && window.top.document.body && window.top.document.body.innerText) || '';
+      const fromTopTitle = monthYearFromText(rootText);
+      if (fromTopTitle) return fromTopTitle;
+      const fromWidget = monthYearFromDateWidget(rootText);
+      if (fromWidget) return fromWidget;
+    } catch (_) {}
+
+    const fromWidgetLocal = monthYearFromDateWidget(bodyText);
+    if (fromWidgetLocal) return fromWidgetLocal;
+
+    const now = new Date();
+    return { month: now.getMonth() + 1, year: now.getFullYear(), source: 'now' };
   }
 
   function parseRowsFromTable(table, month, year) {
@@ -442,10 +474,8 @@ function buildSalaryExtractScript() {
   function extractFromDoc(doc, frameUrl) {
     try {
       if (!doc || !doc.body) return { ok: false, frameUrl, error: 'sin DOM', entries: [] };
-      const text = doc.body.innerText || '';
-      const head = monthYearFromText(text);
-      if (!head) return { ok: false, frameUrl, error: 'no se detecta mes/anio de jornales', entries: [] };
 
+      const head = resolveMonthYear(doc);
       const tables = Array.from(doc.querySelectorAll('table'));
       let all = [];
       for (const t of tables) {
@@ -454,9 +484,9 @@ function buildSalaryExtractScript() {
       }
 
       if (!all.length) return { ok: false, frameUrl, error: 'no se encontro tabla de jornales/primas', entries: [] };
-      return { ok: true, frameUrl, month: head.month, year: head.year, entries: all };
+      return { ok: true, frameUrl, month: head.month, year: head.year, entries: all, source: head.source };
     } catch (e) {
-      return { ok: false, frameUrl, error: String(e && e.message || e), entries: [] };
+      return { ok: false, frameUrl, error: String((e && e.message) || e), entries: [] };
     }
   }
 
@@ -481,7 +511,6 @@ function buildSalaryExtractScript() {
 true;
 `;
 }
-
 export default function App() {
   const webRef = useRef(null);
   const [toolMode, setToolMode] = useState('puertas');
