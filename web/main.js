@@ -275,8 +275,51 @@ function extractorBody() {
     return { doors, ordered: orderedFromText };
   }
 
-  const snapshot = extract(document);
-  const payload = JSON.stringify(snapshot);
+  function computeInDoc(doc, frameUrl) {
+    try {
+      if (!doc || !doc.body) {
+        return { ok: false, frameUrl, error: 'Frame sin DOM' };
+      }
+      const snapshot = extract(doc);
+      const doorCount = Object.keys(snapshot.doors || {}).length;
+      if (doorCount < 1 || snapshot.ordered.length < 20) {
+        return {
+          ok: false,
+          frameUrl,
+          doorCount,
+          orderedLen: snapshot.ordered.length,
+          error: 'Frame no parece chapero'
+        };
+      }
+      return { ok: true, frameUrl, snapshot };
+    } catch (err) {
+      return { ok: false, frameUrl, error: String(err && err.message || err) };
+    }
+  }
+
+  const payloads = [];
+  payloads.push(computeInDoc(document, location.href));
+
+  for (let i = 0; i < window.frames.length; i += 1) {
+    try {
+      const fwin = window.frames[i];
+      const fdoc = fwin.document;
+      const furl = (fwin.location && fwin.location.href) || ('frame:' + i);
+      payloads.push(computeInDoc(fdoc, furl));
+    } catch (_err) {}
+  }
+
+  const ok = payloads.filter((p) => p.ok);
+  if (!ok.length) {
+    const why = payloads
+      .map((p) => `[${p.frameUrl}] ${p.error || 'sin datos'} (doors=${p.doorCount ?? '-'} ordered=${p.orderedLen ?? '-'})`)
+      .join(' | ');
+    alert('No se pudo leer chapero. Asegurate de estar en Chapero por especialidades.\n\n' + why);
+    return;
+  }
+
+  ok.sort((a, b) => (b.snapshot.ordered.length || 0) - (a.snapshot.ordered.length || 0));
+  const payload = JSON.stringify(ok[0].snapshot);
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(payload).then(() => {
