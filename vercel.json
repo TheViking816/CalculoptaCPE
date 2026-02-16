@@ -1,8 +1,9 @@
 {
   "version": 2,
   "routes": [
-    { "src": "/", "dest": "/web/index.html" },
+    { "src": "/", "dest": "/web/instalar.html" },
     { "src": "/instalar", "dest": "/web/instalar.html" },
+    { "src": "/calculadora", "dest": "/web/index.html" },
     { "src": "/CPEV.png", "dest": "/assets/CPEV.png" },
     { "src": "/styles.css", "dest": "/web/styles.css" },
     { "src": "/main.js", "dest": "/web/main.js" }
