@@ -40,14 +40,25 @@ jobs:
       - name: Generate native Android project
         run: npx expo prebuild --platform android --non-interactive --clean
 
-      - name: Build debug APK
+      - name: Build release APK
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Collect APK
+        run: |
+          mkdir -p /tmp/apk
+          APK_PATH=$(find android/app/build/outputs/apk -type f -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK found"
+            exit 1
+          fi
+          cp "$APK_PATH" /tmp/apk/puertas-cpe.apk
+          echo "Using APK: $APK_PATH"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: puertas-cpe-debug-apk
-          path: mobile-app/android/app/build/outputs/apk/debug/app-debug.apk
+          name: puertas-cpe-release-apk
+          path: /tmp/apk/puertas-cpe.apk
           if-no-files-found: error
