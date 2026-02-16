@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView, View, Text, TextInput, Pressable, StyleSheet, ScrollView, Platform, StatusBar as RNStatusBar } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { WebView } from 'react-native-webview';
@@ -619,8 +619,17 @@ export default function App() {
   const [toolsOpen, setToolsOpen] = useState(false);
   const [showDoorsResult, setShowDoorsResult] = useState(false);
   const [showSalaryResult, setShowSalaryResult] = useState(false);
+  const salaryReqRef = useRef(0);
+  const salaryTimerRef = useRef(null);
 
   const topInset = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) : 0;
+
+  useEffect(() => () => {
+    if (salaryTimerRef.current) {
+      clearTimeout(salaryTimerRef.current);
+      salaryTimerRef.current = null;
+    }
+  }, []);
 
   const doorsSummary = useMemo(() => {
     if (!calc || !calc.ok) return null;
@@ -687,6 +696,17 @@ export default function App() {
     setSalaryResult(null);
     setShowSalaryResult(false);
     setShowDoorsResult(false);
+
+    salaryReqRef.current += 1;
+    const requestId = salaryReqRef.current;
+    if (salaryTimerRef.current) clearTimeout(salaryTimerRef.current);
+    salaryTimerRef.current = setTimeout(() => {
+      if (salaryReqRef.current === requestId) {
+        setStatus('Error sueldometro: tiempo de espera agotado. Pulsa Leer pantalla de nuevo.');
+        setShowSalaryResult(false);
+      }
+    }, 10000);
+
     webRef.current?.injectJavaScript(buildSalaryExtractScript());
   }
 
@@ -708,6 +728,10 @@ export default function App() {
       }
 
       if (data.type === 'salary_extract') {
+        if (salaryTimerRef.current) {
+          clearTimeout(salaryTimerRef.current);
+          salaryTimerRef.current = null;
+        }
         if (data.result && data.result.ok) {
           const irpfNum = Number(String(irpf).replace(',', '.'));
           const safeIrpf = Number.isFinite(irpfNum) ? Math.max(0, Math.min(60, irpfNum)) : 0;
