@@ -49,6 +49,12 @@ Deploy en Vercel:
 3. Pulsa el icono de la extension
 4. Introduce chapa (ej. `2683`) y pulsa `Calcular`
 
+### Publicar en Chrome Web Store
+- Guia: `extension/CHROME_WEB_STORE.md`
+- Politica de privacidad base: `extension/PRIVACY_POLICY.md`
+- Empaquetar ZIP:
+  - `powershell -ExecutionPolicy Bypass -File .\extension\package-extension.ps1`
+
 ## Despliegue en Internet (sin depender de tu PC)
 Este proyecto **no es apto para Vercel** tal como esta porque usa Playwright con perfil de sesion persistente.
 
