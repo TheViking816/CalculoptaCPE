@@ -283,6 +283,55 @@ function extractorBody() {
     return { doors, ordered: orderedFromText };
   }
 
+  function toCensoKey(chapaNorm) {
+    if (!chapaNorm) return null;
+    const digits = String(chapaNorm).replace(/\D/g, '');
+    if (!digits) return null;
+    if (digits.length >= 4) return digits.slice(-4);
+    return digits.padStart(4, '0');
+  }
+
+  function calculate(snapshot, userInput) {
+    const userChapa = normalizeChapa(userInput);
+    const userCensoKey = toCensoKey(userChapa);
+    if (!userChapa) throw new Error('Chapa invalida');
+
+    const idx = new Map();
+    snapshot.ordered.forEach((e, i) => {
+      const k = toCensoKey(e.norm);
+      if (k && !idx.has(k)) idx.set(k, i);
+    });
+    const userIdx = idx.get(userCensoKey);
+    if (userIdx === undefined) throw new Error('Tu chapa no aparece en el censo');
+
+    function countGrayForwardCircularExclusive(fromIdx, toIdx) {
+      const n = snapshot.ordered.length;
+      if (!n || fromIdx === toIdx) return 0;
+      let c = 0;
+      for (let i = (fromIdx + 1) % n; i !== toIdx; i = (i + 1) % n) {
+        if (snapshot.ordered[i].isNoContratado) c += 1;
+      }
+      return c;
+    }
+
+    const results = Object.entries(snapshot.doors).map(([door, doorChapa]) => {
+      const doorKey = toCensoKey(doorChapa);
+      const doorIdx = idx.get(doorKey);
+      if (doorIdx === undefined) {
+        return { door, doorChapa, distance: null, error: 'Puerta no encontrada en censo (' + doorKey + ')' };
+      }
+      return { door, doorChapa, distance: countGrayForwardCircularExclusive(doorIdx, userIdx) };
+    });
+
+    const ranked = results.filter((r) => Number.isFinite(r.distance)).sort((a, b) => a.distance - b.distance);
+    return {
+      userChapa,
+      userCensoKey,
+      results,
+      recommended: ranked[0] || null,
+    };
+  }
+
   function computeInDoc(doc, frameUrl) {
     try {
       if (!doc || !doc.body) {
@@ -327,17 +376,70 @@ function extractorBody() {
   }
 
   ok.sort((a, b) => (b.snapshot.ordered.length || 0) - (a.snapshot.ordered.length || 0));
-  const payload = JSON.stringify(ok[0].snapshot);
+  const snapshot = ok[0].snapshot;
 
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(payload).then(() => {
-      alert('Snapshot copiado al portapapeles.');
-    }).catch(() => {
-      prompt('Copia este snapshot JSON:', payload);
-    });
-  } else {
-    prompt('Copia este snapshot JSON:', payload);
+  const last = localStorage.getItem('cpe_chapa_last') || '';
+  const rawInput = prompt('Introduce tu chapa (ej. 2683 o 72683):', last);
+  if (rawInput === null) return;
+
+  const chapa = String(rawInput || '').trim();
+  if (!chapa) {
+    alert('Debes introducir una chapa.');
+    return;
   }
+  localStorage.setItem('cpe_chapa_last', chapa);
+
+  let data;
+  try {
+    data = calculate(snapshot, chapa);
+  } catch (err) {
+    alert('Error al calcular: ' + String(err && err.message || err));
+    return;
+  }
+
+  const old = document.getElementById('cpe-distance-modal');
+  if (old) old.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'cpe-distance-modal';
+  modal.style.cssText = [
+    'position:fixed', 'inset:0', 'z-index:999999', 'background:rgba(8,14,25,.65)',
+    'display:flex', 'align-items:center', 'justify-content:center', 'padding:16px'
+  ].join(';');
+
+  const bestText = data.recommended
+    ? data.recommended.door + ' (distancia ' + data.recommended.distance + ')'
+    : 'Sin recomendacion';
+
+  const rows = data.results.map((r) => {
+    const isBest = data.recommended && data.recommended.door === r.door;
+    const bg = isBest ? 'background:#e8fff2;font-weight:700' : '';
+    const dist = Number.isFinite(r.distance) ? r.distance : '-';
+    const err = r.error || '';
+    return '<tr style="' + bg + '"><td style="padding:8px;border-bottom:1px solid #dbe3ef">' + r.door + '</td><td style="padding:8px;border-bottom:1px solid #dbe3ef">' + r.doorChapa + '</td><td style="padding:8px;border-bottom:1px solid #dbe3ef">' + dist + '</td><td style="padding:8px;border-bottom:1px solid #dbe3ef">' + err + '</td></tr>';
+  }).join('');
+
+  modal.innerHTML = ''
+    + '<div style="width:min(860px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:12px;border:1px solid #d7e1ee;padding:14px;font-family:Segoe UI,Tahoma,sans-serif;color:#10243a">'
+    + '  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px">'
+    + '    <h2 style="margin:0;font-size:22px">CPE Distancia Puertas</h2>'
+    + '    <button id="cpe-distance-close" style="border:0;background:#e6edf5;border-radius:8px;padding:8px 12px;cursor:pointer">Cerrar</button>'
+    + '  </div>'
+    + '  <p style="margin:0 0 8px"><strong>Chapa usuario:</strong> ' + data.userChapa + ' (censo ' + data.userCensoKey + ')</p>'
+    + '  <p style="margin:0 0 12px"><strong>Puerta mas cercana:</strong> <span style="color:#0b6c3d;font-weight:700">' + bestText + '</span></p>'
+    + '  <table style="width:100%;border-collapse:collapse;font-size:15px">'
+    + '    <thead><tr><th style="text-align:left;padding:8px;border-bottom:1px solid #dbe3ef">Puerta</th><th style="text-align:left;padding:8px;border-bottom:1px solid #dbe3ef">Chapa puerta</th><th style="text-align:left;padding:8px;border-bottom:1px solid #dbe3ef">Distancia</th><th style="text-align:left;padding:8px;border-bottom:1px solid #dbe3ef">Estado</th></tr></thead>'
+    + '    <tbody>' + rows + '</tbody>'
+    + '  </table>'
+    + '</div>';
+
+  modal.addEventListener('click', (ev) => {
+    if (ev.target === modal) modal.remove();
+  });
+  document.body.appendChild(modal);
+
+  const closeBtn = document.getElementById('cpe-distance-close');
+  if (closeBtn) closeBtn.addEventListener('click', () => modal.remove());
 }
 
 function buildExtractorScript() {
