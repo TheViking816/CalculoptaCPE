@@ -566,6 +566,53 @@ function buildSalaryExtractScript() {
     }
   }
 
+
+  function extractFromHtmlString(htmlText, sourceUrl) {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(String(htmlText || ''), 'text/html');
+      return extractFromDoc(doc, sourceUrl || 'fetch-html');
+    } catch (e) {
+      return { ok: false, frameUrl: sourceUrl || 'fetch-html', error: 'fallo parse html: ' + String((e && e.message) || e), entries: [] };
+    }
+  }
+
+  async function tryFetchFallback(payloads) {
+    try {
+      const urls = [];
+      const seen = {};
+
+      function addUrl(u) {
+        if (!u || typeof u !== 'string') return;
+        if (!/^https?:\/\//i.test(u)) return;
+        if (seen[u]) return;
+        seen[u] = true;
+        urls.push(u);
+      }
+
+      for (let i = 0; i < payloads.length; i += 1) {
+        addUrl(payloads[i] && payloads[i].frameUrl);
+      }
+
+      try {
+        const base = window.location && window.location.origin;
+        if (base) addUrl(base + '/Noray/JornalesPrimas.asp');
+      } catch (_) {}
+
+      for (let i = 0; i < urls.length; i += 1) {
+        const u = urls[i];
+        try {
+          const resp = await fetch(u, { credentials: 'include', cache: 'no-store' });
+          if (!resp || !resp.ok) continue;
+          const html = await resp.text();
+          const parsed = extractFromHtmlString(html, u + ' [fetch]');
+          if (parsed && parsed.ok && parsed.entries && parsed.entries.length) return parsed;
+        } catch (_) {}
+      }
+    } catch (_) {}
+
+    return null;
+  }
   function runExtract(attempt) {
     const docs = [];
     collectDocs(window, docs, new Set());
@@ -583,21 +630,37 @@ function buildSalaryExtractScript() {
         window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'salary_extract', result }));
       }
       return;
-    }
-
-    if (attempt < 12) {
+    }    if (attempt < 12) {
       setTimeout(() => runExtract(attempt + 1), 300);
       return;
     }
 
-    const result = {
-      ok: false,
-      error: payloads.map((p) => '[' + p.frameUrl + '] ' + p.error).join(' | '),
-      entries: [],
-    };
-    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'salary_extract', result }));
-    }
+    tryFetchFallback(payloads).then((fetched) => {
+      if (fetched && fetched.ok && fetched.entries && fetched.entries.length) {
+        if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'salary_extract', result: fetched }));
+        }
+        return;
+      }
+
+      const result = {
+        ok: false,
+        error: payloads.map((p) => '[' + p.frameUrl + '] ' + p.error).join(' | '),
+        entries: [],
+      };
+      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'salary_extract', result }));
+      }
+    }).catch(() => {
+      const result = {
+        ok: false,
+        error: payloads.map((p) => '[' + p.frameUrl + '] ' + p.error).join(' | '),
+        entries: [],
+      };
+      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'salary_extract', result }));
+      }
+    });
   }
 
   runExtract(0);
