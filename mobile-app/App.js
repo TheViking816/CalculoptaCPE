@@ -5,6 +5,8 @@ import { WebView } from 'react-native-webview';
 
 const URL_HOME = 'https://portal.cpevalencia.com/#Home';
 const URL_CHAPERO = 'https://portal.cpevalencia.com/#User,ViewNoray,8';
+const URL_SUELDO = 'https://misueldocpe.vercel.app/';
+const URL_DESCANSOS = 'https://descansos-cpe.vercel.app/';
 
 const MODULES = {
   PUERTAS: 'puertas',
@@ -218,6 +220,7 @@ true;
 
 export default function App() {
   const webRef = useRef(null);
+  const lastSafeUrlRef = useRef(URL_HOME);
   const [chapa, setChapa] = useState('');
   const [status, setStatus] = useState('Listo.');
   const [calc, setCalc] = useState(null);
@@ -239,7 +242,12 @@ export default function App() {
     const u = String(rawUrl || '').toLowerCase();
     if (!u) return false;
     if (u.includes('.pdf')) return true;
+    if (u.includes('.zip') || u.includes('.rar') || u.includes('.7z')) return true;
+    if (u.includes('.xls') || u.includes('.xlsx') || u.includes('.csv')) return true;
+    if (u.includes('.doc') || u.includes('.docx')) return true;
     if (u.includes('/informe')) return true;
+    if (u.includes('attachment=')) return true;
+    if (u.includes('content-disposition=')) return true;
     if (u.includes('descarga')) return true;
     if (u.includes('download')) return true;
     return false;
@@ -259,6 +267,50 @@ export default function App() {
     setStatus('Descarga bloqueada en la app: ' + (nextUrl || 'archivo'));
   }
 
+  function onNavChange(navState) {
+    const nextUrl = String((navState && navState.url) || '');
+    if (!nextUrl) return;
+    if (shouldBlockDownloadUrl(nextUrl)) {
+      webRef.current?.stopLoading();
+      setStatus('Descarga bloqueada en la app. Abre ese documento en navegador si lo necesitas.');
+      if (lastSafeUrlRef.current) setUrl(lastSafeUrlRef.current);
+      return;
+    }
+    lastSafeUrlRef.current = nextUrl;
+  }
+
+  function getBlockDownloadsInjectedJs() {
+    return `
+(() => {
+  function blocked(url) {
+    const u = String(url || '').toLowerCase();
+    if (!u) return false;
+    return u.includes('.pdf') || u.includes('.zip') || u.includes('.rar') || u.includes('.7z') ||
+      u.includes('.xls') || u.includes('.xlsx') || u.includes('.csv') || u.includes('.doc') ||
+      u.includes('.docx') || u.includes('/informe') || u.includes('attachment=') ||
+      u.includes('content-disposition=') || u.includes('descarga') || u.includes('download');
+  }
+
+  const oldOpen = window.open;
+  window.open = function(url) {
+    if (blocked(url)) return null;
+    return oldOpen ? oldOpen.apply(window, arguments) : null;
+  };
+
+  document.addEventListener('click', function(e) {
+    const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    const href = a.getAttribute('href') || '';
+    if (blocked(href)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
+})();
+true;
+`;
+  }
+
   function openChapero() {
     setStatus('Abriendo chapero...');
     const target = `${URL_CHAPERO}&r=${Date.now()}`;
@@ -271,6 +323,14 @@ export default function App() {
       } catch (_) {}
       true;
     `);
+  }
+
+  function openModuleUrl(moduleKey) {
+    const target = moduleKey === MODULES.SUELDO ? URL_SUELDO : URL_DESCANSOS;
+    setUrl(target);
+    lastSafeUrlRef.current = target;
+    setStatus('Abriendo modulo...');
+    setToolsOpen(false);
   }
 
   function onCalcPress() {
@@ -323,11 +383,15 @@ export default function App() {
             onMessage={onMessage}
             onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
             onFileDownload={onFileDownload}
+            onNavigationStateChange={onNavChange}
             sharedCookiesEnabled
             thirdPartyCookiesEnabled
             javaScriptEnabled
             domStorageEnabled
             setSupportMultipleWindows={false}
+            allowFileAccess={false}
+            allowingReadAccessToURL={URL_HOME}
+            injectedJavaScriptBeforeContentLoaded={getBlockDownloadsInjectedJs()}
             originWhitelist={['*']}
           />
         )}
@@ -388,8 +452,14 @@ export default function App() {
                 {module === MODULES.SUELDO ? 'Sueldometro' : 'Descansos'}
               </Text>
               <Text style={styles.moduleCardText}>
-                Este modulo ira en app independiente para que funcione mejor y sin limites del portal embebido.
+                Acceso directo al modulo web.
               </Text>
+              <Pressable
+                style={[styles.btn, styles.btnPrimary, { marginTop: 10 }]}
+                onPress={() => openModuleUrl(module)}
+              >
+                <Text style={styles.btnPrimaryText}>Abrir modulo</Text>
+              </Pressable>
             </View>
           )}
 
