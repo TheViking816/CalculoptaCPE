@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { SafeAreaView, View, Text, TextInput, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
+import { SafeAreaView, View, Text, TextInput, Pressable, StyleSheet, ScrollView, Platform, StatusBar as RNStatusBar } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { WebView } from 'react-native-webview';
 
@@ -216,6 +216,7 @@ export default function App() {
   const [status, setStatus] = useState('Abre portal, inicia sesion y entra en Chapero por especialidades.');
   const [calc, setCalc] = useState(null);
   const [url, setUrl] = useState(URL_HOME);
+  const topInset = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) : 0;
 
   const summary = useMemo(() => {
     if (!calc || !calc.ok) return null;
@@ -226,8 +227,17 @@ export default function App() {
   }, [calc]);
 
   function openChapero() {
-    setUrl(URL_CHAPERO);
-    setStatus('Cargando chapero...');
+    setStatus('Abriendo chapero...');
+    const target = `${URL_CHAPERO}&r=${Date.now()}`;
+    setUrl(target);
+    // Navigate inside current WebView context as primary path.
+    webRef.current?.injectJavaScript(`
+      try {
+        window.location.hash = '#User,ViewNoray,8';
+        window.location.href = '${URL_CHAPERO}';
+      } catch (_) {}
+      true;
+    `);
   }
 
   function onCalcPress() {
@@ -262,8 +272,8 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={[styles.safe, { paddingTop: topInset }]}>
+      <StatusBar style="dark" translucent={false} backgroundColor="#ffffff" />
       <View style={styles.top}>
         <Text style={styles.title}>Puertas CPE movil</Text>
         <Text style={styles.subtitle}>Calcula directo en Chapero por especialidades</Text>
@@ -311,14 +321,23 @@ export default function App() {
       <ScrollView style={styles.bottom} contentContainerStyle={{ paddingBottom: 16 }}>
         {summary ? <Text style={styles.summary}>{summary}</Text> : null}
         {calc && calc.ok ? (
-          calc.results.map((r) => (
-            <View key={r.door} style={styles.rowResult}>
-              <Text style={styles.colDoor}>{r.door}</Text>
-              <Text style={styles.colValue}>{r.doorChapa}</Text>
-              <Text style={styles.colValue}>{Number.isFinite(r.distance) ? r.distance : '-'}</Text>
-              <Text style={styles.colState}>{r.error || 'ok'}</Text>
+          <>
+            <View style={styles.rowHead}>
+              <Text style={styles.colDoorHead}>Puerta</Text>
+              <Text style={styles.colValueHead}>Chapa</Text>
+              <Text style={styles.colValueHead}>Distancia</Text>
             </View>
-          ))
+            {calc.results.map((r) => (
+              <View key={r.door}>
+                <View style={styles.rowResult}>
+                  <Text style={styles.colDoor}>{r.door}</Text>
+                  <Text style={styles.colValue}>{r.doorChapa}</Text>
+                  <Text style={styles.colValue}>{Number.isFinite(r.distance) ? r.distance : '-'}</Text>
+                </View>
+                {r.error ? <Text style={styles.rowError}>{r.error}</Text> : null}
+              </View>
+            ))}
+          </>
         ) : null}
       </ScrollView>
     </SafeAreaView>
@@ -327,7 +346,7 @@ export default function App() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#eef3fa' },
-  top: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 10, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#dbe3ef' },
+  top: { paddingHorizontal: 14, paddingTop: 6, paddingBottom: 10, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#dbe3ef' },
   title: { fontSize: 24, fontWeight: '800', color: '#0e2338' },
   subtitle: { marginTop: 2, color: '#4f6279' },
   row: { marginTop: 8 },
@@ -343,10 +362,13 @@ const styles = StyleSheet.create({
   webInfo: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   webInfoTitle: { fontSize: 20, fontWeight: '800', color: '#0f2a43', marginBottom: 10 },
   webInfoText: { textAlign: 'center', color: '#36516d', marginBottom: 6 },
-  bottom: { maxHeight: 230, backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#dbe3ef', paddingHorizontal: 12, paddingTop: 8 },
+  bottom: { maxHeight: 260, backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#dbe3ef', paddingHorizontal: 12, paddingTop: 8 },
   summary: { fontWeight: '700', color: '#0f2a43', marginBottom: 8 },
+  rowHead: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#d8e2f1' },
+  colDoorHead: { width: 90, fontWeight: '800', color: '#0f2a43' },
+  colValueHead: { width: 90, fontWeight: '800', color: '#0f2a43' },
   rowResult: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#edf2f8' },
-  colDoor: { width: 72, fontWeight: '700', color: '#123151' },
-  colValue: { width: 74, color: '#1e3a5c' },
-  colState: { flex: 1, color: '#395472' }
+  colDoor: { width: 90, fontWeight: '700', color: '#123151' },
+  colValue: { width: 90, color: '#1e3a5c' },
+  rowError: { color: '#a13a3a', marginBottom: 6, fontSize: 12 }
 });
