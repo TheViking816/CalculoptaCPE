@@ -434,7 +434,7 @@ function buildSalaryExtractScript() {
     let headerIndex = -1;
     let headCells = [];
 
-    for (let i = 0; i < Math.min(rows.length, 6); i += 1) {
+    for (let i = 0; i < rows.length; i += 1) {
       const probe = Array.from(rows[i].querySelectorAll('th,td')).map((c) => normalizeText(c.textContent));
       const hasJornada = probe.some((h) => h.includes('JORNADA'));
       const hasDia = probe.some((h) => h === 'DIA' || h.includes(' DIA'));
@@ -522,23 +522,41 @@ function buildSalaryExtractScript() {
     }
   }
 
-  const docs = [];
-  collectDocs(window, docs, new Set());
+  function runExtract(attempt) {
+    const docs = [];
+    collectDocs(window, docs, new Set());
 
-  const payloads = [];
-  for (let i = 0; i < docs.length; i += 1) {
-    const d = docs[i];
-    payloads.push(extractFromDoc(d.doc, d.url || ('frame:' + i)));
+    const payloads = [];
+    for (let i = 0; i < docs.length; i += 1) {
+      const d = docs[i];
+      payloads.push(extractFromDoc(d.doc, d.url || ('frame:' + i)));
+    }
+
+    const ok = payloads.filter((p) => p.ok);
+    if (ok.length) {
+      const result = ok.sort((a, b) => (b.entries.length || 0) - (a.entries.length || 0))[0];
+      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'salary_extract', result }));
+      }
+      return;
+    }
+
+    if (attempt < 12) {
+      setTimeout(() => runExtract(attempt + 1), 300);
+      return;
+    }
+
+    const result = {
+      ok: false,
+      error: payloads.map((p) => '[' + p.frameUrl + '] ' + p.error).join(' | '),
+      entries: [],
+    };
+    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'salary_extract', result }));
+    }
   }
 
-  const ok = payloads.filter((p) => p.ok);
-  const result = ok.length
-    ? ok.sort((a, b) => (b.entries.length || 0) - (a.entries.length || 0))[0]
-    : { ok: false, error: payloads.map((p) => '[' + p.frameUrl + '] ' + p.error).join(' | '), entries: [] };
-
-  if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'salary_extract', result }));
-  }
+  runExtract(0);
 })();
 true;
 `;
