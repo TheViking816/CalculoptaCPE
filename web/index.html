@@ -9,24 +9,22 @@
 <body>
   <main class="page">
     <section class="card">
-      <h1>Calculadora CPE sin servidor</h1>
-      <p class="muted">Cada usuario usa su propia sesion del portal. No requiere backend ni pago.</p>
+      <div class="top-row">
+        <h1>Calculadora Puertas CPE</h1>
+        <button id="theme-toggle" type="button" class="secondary theme-toggle">Modo oscuro</button>
+      </div>
       <section class="quick-install">
         <h2>Instalacion facil (sin tienda)</h2>
         <p class="muted small">
           Arrastra este boton a la barra de marcadores de Chrome:
           <a id="bookmarklet-link" class="bookmarklet-link" href="#">Instalar CPE Distancia</a>
         </p>
-        <div class="tools" style="margin-top: 8px;">
-          <a class="button-link" href="/instalar" target="_blank" rel="noopener noreferrer">Guia paso a paso para usuarios</a>
-          <button id="copy-bookmarklet" type="button" class="secondary">Copiar marcador (manual)</button>
-        </div>
       </section>
 
       <form id="calc-form" class="form">
         <div class="tools">
-          <a class="button-link" href="https://portal.cpevalencia.com/" target="_blank" rel="noopener noreferrer">1) Abrir portal CPE</a>
-          <button id="paste-snapshot" type="button" class="secondary">2) Pegar JSON del portapapeles</button>
+          <a class="button-link" href="https://portal.cpevalencia.com/" target="_blank" rel="noopener noreferrer">Abrir portal CPE</a>
+          <button id="paste-snapshot" type="button" class="secondary">Pegar JSON</button>
         </div>
 
         <label for="snapshot">Snapshot JSON del chapero</label>
@@ -38,16 +36,21 @@
         <button id="submit" type="submit">Calcular</button>
       </form>
 
-      <div class="tools">
-        <button id="copy-script" type="button" class="secondary">Copiar script extractor</button>
-      </div>
-
-      <p class="muted small">Flujo rapido: abrir portal, ir a chapero, ejecutar extractor, volver aqui y calcular.</p>
-
       <div id="status" class="status"></div>
       <div id="result"></div>
     </section>
   </main>
+
+  <div id="result-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="modal-title">Resultado</h2>
+        <button id="close-modal" type="button" class="secondary">Cerrar</button>
+      </div>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
   <script src="/main.js"></script>
 </body>
 </html>

@@ -8,9 +8,13 @@ const copyBookmarkletBtn = document.getElementById('copy-bookmarklet');
 const copyScriptBtn = document.getElementById('copy-script');
 const pasteSnapshotBtn = document.getElementById('paste-snapshot');
 const bookmarkletLink = document.getElementById('bookmarklet-link');
+const themeToggleBtn = document.getElementById('theme-toggle');
+const resultModal = document.getElementById('result-modal');
+const modalContent = document.getElementById('modal-content');
+const closeModalBtn = document.getElementById('close-modal');
 
 function setStatus(msg) {
-  statusBox.textContent = msg || '';
+  if (statusBox) statusBox.textContent = msg || '';
 }
 
 function normalizeChapa(value) {
@@ -158,10 +162,10 @@ function renderResult(data) {
     .join('');
 
   const bestText = data.recommended
-    ? `Puerta recomendada: ${data.recommended.door} (distancia ${data.recommended.distance})`
+    ? `Puerta mas cercana: ${data.recommended.door} (distancia ${data.recommended.distance})`
     : 'Sin recomendacion disponible.';
 
-  resultBox.innerHTML = `
+  const html = `
     <p><strong>Chapa usuario:</strong> ${escapeHtml(data.userChapa)}</p>
     <p><strong>Resumen:</strong> ${escapeHtml(data.meta.noContratadas)} no contratadas detectadas de ${escapeHtml(data.meta.totalChapas)} chapas</p>
     <p class="winner">${escapeHtml(bestText)}</p>
@@ -172,6 +176,10 @@ function renderResult(data) {
       <tbody>${rows}</tbody>
     </table>
   `;
+
+  if (resultBox) resultBox.innerHTML = html;
+  if (modalContent) modalContent.innerHTML = html;
+  if (resultModal) resultModal.classList.remove('hidden');
 }
 
 function extractorBody() {
@@ -357,6 +365,34 @@ if (bookmarkletLink) {
   bookmarkletLink.href = buildBookmarkletHref();
 }
 
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('cpe_theme', theme);
+  if (themeToggleBtn) {
+    themeToggleBtn.textContent = theme === 'dark' ? 'Modo claro' : 'Modo oscuro';
+  }
+}
+
+if (themeToggleBtn) {
+  const saved = localStorage.getItem('cpe_theme');
+  const preferDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(saved || (preferDark ? 'dark' : 'light'));
+  themeToggleBtn.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') || 'light';
+    applyTheme(current === 'dark' ? 'light' : 'dark');
+  });
+}
+
+if (closeModalBtn && resultModal) {
+  closeModalBtn.addEventListener('click', () => resultModal.classList.add('hidden'));
+}
+
+if (resultModal) {
+  resultModal.addEventListener('click', (ev) => {
+    if (ev.target === resultModal) resultModal.classList.add('hidden');
+  });
+}
+
 if (form && snapshotInput && chapaInput && submitBtn && resultBox) {
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
@@ -375,17 +411,6 @@ if (form && snapshotInput && chapaInput && submitBtn && resultBox) {
       setStatus('Error: ' + err.message);
     } finally {
       submitBtn.disabled = false;
-    }
-  });
-}
-
-if (copyScriptBtn) {
-  copyScriptBtn.addEventListener('click', async () => {
-    try {
-      await copyText(buildExtractorScript());
-      setStatus('Script copiado. En el portal: F12 -> Consola -> pegar -> Enter. Luego vuelve y pulsa "Pegar JSON del portapapeles".');
-    } catch (err) {
-      setStatus('No se pudo copiar: ' + err.message);
     }
   });
 }
