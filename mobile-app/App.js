@@ -503,13 +503,32 @@ function buildSalaryExtractScript() {
     }
   }
 
-  const payloads = [];
-  payloads.push(extractFromDoc(document, location.href));
-  for (let i = 0; i < window.frames.length; i += 1) {
+  function collectDocs(win, out, seen) {
+    if (!win || seen.has(win)) return;
+    seen.add(win);
+
     try {
-      const fwin = window.frames[i];
-      payloads.push(extractFromDoc(fwin.document, (fwin.location && fwin.location.href) || ('frame:' + i)));
+      out.push({
+        doc: win.document,
+        url: (win.location && win.location.href) || 'about:blank',
+      });
     } catch (_) {}
+
+    const len = (win.frames && win.frames.length) || 0;
+    for (let i = 0; i < len; i += 1) {
+      try {
+        collectDocs(win.frames[i], out, seen);
+      } catch (_) {}
+    }
+  }
+
+  const docs = [];
+  collectDocs(window, docs, new Set());
+
+  const payloads = [];
+  for (let i = 0; i < docs.length; i += 1) {
+    const d = docs[i];
+    payloads.push(extractFromDoc(d.doc, d.url || ('frame:' + i)));
   }
 
   const ok = payloads.filter((p) => p.ok);
