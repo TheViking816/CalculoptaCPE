@@ -7,6 +7,7 @@ const submitBtn = document.getElementById('submit');
 const copyBookmarkletBtn = document.getElementById('copy-bookmarklet');
 const copyScriptBtn = document.getElementById('copy-script');
 const pasteSnapshotBtn = document.getElementById('paste-snapshot');
+const bookmarkletLink = document.getElementById('bookmarklet-link');
 
 function setStatus(msg) {
   statusBox.textContent = msg || '';
@@ -292,6 +293,10 @@ function buildExtractorScript() {
   return '(' + extractorBody.toString() + ')();';
 }
 
+function buildBookmarkletHref() {
+  return 'javascript:' + buildExtractorScript();
+}
+
 async function copyText(value) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     await navigator.clipboard.writeText(value);
@@ -305,52 +310,64 @@ async function copyText(value) {
   t.remove();
 }
 
-form.addEventListener('submit', async (ev) => {
-  ev.preventDefault();
+if (bookmarkletLink) {
+  bookmarkletLink.href = buildBookmarkletHref();
+}
 
-  setStatus('Calculando...');
-  resultBox.innerHTML = '';
-  submitBtn.disabled = true;
+if (form && snapshotInput && chapaInput && submitBtn && resultBox) {
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
 
-  try {
-    const parsed = parseSnapshotText(snapshotInput.value);
-    const snapshot = normalizeSnapshot(parsed);
-    const data = calculateDoorDistances(chapaInput.value.trim(), snapshot);
-    renderResult(data);
-    setStatus('Calculo completado.');
-  } catch (err) {
-    setStatus('Error: ' + err.message);
-  } finally {
-    submitBtn.disabled = false;
-  }
-});
+    setStatus('Calculando...');
+    resultBox.innerHTML = '';
+    submitBtn.disabled = true;
 
-copyScriptBtn.addEventListener('click', async () => {
-  try {
-    await copyText(buildExtractorScript());
-    setStatus('Script copiado. En el portal: F12 -> Consola -> pegar -> Enter. Luego vuelve y pulsa "Pegar JSON del portapapeles".');
-  } catch (err) {
-    setStatus('No se pudo copiar: ' + err.message);
-  }
-});
+    try {
+      const parsed = parseSnapshotText(snapshotInput.value);
+      const snapshot = normalizeSnapshot(parsed);
+      const data = calculateDoorDistances(chapaInput.value.trim(), snapshot);
+      renderResult(data);
+      setStatus('Calculo completado.');
+    } catch (err) {
+      setStatus('Error: ' + err.message);
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+}
 
-copyBookmarkletBtn.addEventListener('click', async () => {
-  try {
-    await copyText('javascript:' + buildExtractorScript());
-    setStatus('Bookmarklet copiado. Guardalo como marcador y ejecútalo dentro de la pagina del chapero.');
-  } catch (err) {
-    setStatus('No se pudo copiar: ' + err.message);
-  }
-});
+if (copyScriptBtn) {
+  copyScriptBtn.addEventListener('click', async () => {
+    try {
+      await copyText(buildExtractorScript());
+      setStatus('Script copiado. En el portal: F12 -> Consola -> pegar -> Enter. Luego vuelve y pulsa "Pegar JSON del portapapeles".');
+    } catch (err) {
+      setStatus('No se pudo copiar: ' + err.message);
+    }
+  });
+}
 
-pasteSnapshotBtn.addEventListener('click', async () => {
-  try {
-    const text = await navigator.clipboard.readText();
-    if (!text || !text.trim()) throw new Error('Portapapeles vacio');
-    const parsed = parseSnapshotText(text);
-    snapshotInput.value = JSON.stringify(parsed);
-    setStatus('JSON pegado automaticamente.');
-  } catch (err) {
-    setStatus('No se pudo pegar automatico: ' + err.message);
-  }
-});
+if (copyBookmarkletBtn) {
+  copyBookmarkletBtn.addEventListener('click', async () => {
+    try {
+      await copyText(buildBookmarkletHref());
+      setStatus('Marcador copiado. Crea un marcador y pega el contenido en su URL.');
+    } catch (err) {
+      setStatus('No se pudo copiar: ' + err.message);
+    }
+  });
+}
+
+if (pasteSnapshotBtn && snapshotInput) {
+  pasteSnapshotBtn.addEventListener('click', async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text || !text.trim()) throw new Error('Portapapeles vacio');
+      const parsed = parseSnapshotText(text);
+      snapshotInput.value = JSON.stringify(parsed);
+      setStatus('JSON pegado automaticamente.');
+    } catch (err) {
+      setStatus('No se pudo pegar automatico: ' + err.message);
+    }
+  });
+}

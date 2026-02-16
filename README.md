@@ -28,8 +28,9 @@ Este repo incluye una web cliente en `web/` que funciona sin servidor:
 
 Deploy en Vercel:
 - Importa este repo.
-- Vercel usara `vercel.json` para servir solo `web/index.html`, `web/main.js` y `web/styles.css`.
+- Vercel usara `vercel.json` para servir `web/index.html`, `web/instalar.html`, `web/main.js` y `web/styles.css`.
 - URL publica esperada: `https://tu-proyecto.vercel.app/`
+- URL de instalacion facil para usuarios: `https://tu-proyecto.vercel.app/instalar`
 
 ## CLI
 - `npm run cli -- --chapa 2683 --manual`

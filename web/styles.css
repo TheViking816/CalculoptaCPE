@@ -30,6 +30,14 @@ body {
 }
 h1 { margin: 0 0 8px; font-size: 28px; }
 .muted { margin: 0 0 18px; color: var(--muted); }
+.quick-install {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+h2 { margin: 0 0 8px; font-size: 20px; }
 .form { display: grid; gap: 10px; }
 input[type="text"] {
   border: 1px solid var(--line);
@@ -81,6 +89,17 @@ button[disabled] { opacity: .6; cursor: wait; }
   padding: 12px;
   font-size: 16px;
 }
+.bookmarklet-link {
+  display: inline-block;
+  margin-left: 8px;
+  text-decoration: none;
+  border-radius: 8px;
+  background: #0e5ea8;
+  color: #fff;
+  padding: 8px 12px;
+  font-weight: 700;
+}
+.install-steps p { margin: 10px 0; }
 .small {
   font-size: 13px;
   margin-top: 10px;

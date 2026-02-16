@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Instalar CPE Distancia</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="page">
+    <section class="card">
+      <h1>Instalar CPE Distancia en 1 minuto</h1>
+      <p class="muted">No hace falta tienda ni conocimientos tecnicos.</p>
+
+      <div class="install-steps">
+        <p><strong>Paso 1.</strong> Muestra la barra de marcadores en Chrome con <strong>Ctrl + Shift + B</strong>.</p>
+        <p>
+          <strong>Paso 2.</strong> Arrastra este boton a la barra:
+          <a id="bookmarklet-link" class="bookmarklet-link" href="#">Instalar CPE Distancia</a>
+        </p>
+        <p><strong>Paso 3.</strong> Abre <a href="https://portal.cpevalencia.com/" target="_blank" rel="noopener noreferrer">portal.cpevalencia.com</a> e inicia sesion.</p>
+        <p><strong>Paso 4.</strong> Ve a <strong>Chapero por especialidades</strong>.</p>
+        <p><strong>Paso 5.</strong> Pulsa el marcador <strong>Instalar CPE Distancia</strong>, escribe tu chapa y listo.</p>
+      </div>
+
+      <div class="tools">
+        <button id="copy-bookmarklet" type="button" class="secondary">Copiar marcador (manual)</button>
+        <a class="button-link" href="/">Abrir calculadora web</a>
+      </div>
+
+      <p class="muted small">Si no te deja arrastrar, crea un marcador cualquiera y pega el contenido copiado en el campo URL.</p>
+      <div id="status" class="status"></div>
+    </section>
+  </main>
+  <script src="/main.js"></script>
+</body>
+</html>
