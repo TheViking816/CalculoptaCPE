@@ -483,6 +483,37 @@ function buildSalaryExtractScript() {
 
     return out;
   }
+  function parseRowsFromText(text, month, year) {
+    const out = [];
+    const lines = String(text || '').split(/\r?\n/).map((l) => String(l || '').trim()).filter(Boolean);
+
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i];
+      const m = line.match(/(?:^|\s)(\d{1,2})\s+(TUR|NUD)\s+DE\s*(\d{1,2})\s*A\s*(\d{1,2})\s*H\.?/i);
+      if (!m) continue;
+
+      const day = Number(m[1]);
+      const t1 = String(m[3]).padStart(2, '0');
+      const t2 = String(m[4]).padStart(2, '0');
+      const shift = t1 + '-' + t2;
+      if (!Number.isInteger(day) || day < 1 || day > 31) continue;
+
+      let production = parseMoney(line);
+      if (!production && i + 1 < lines.length) {
+        production = parseMoney(lines[i + 1]);
+      }
+
+      out.push({
+        date: String(year) + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0'),
+        shift,
+        tipo: String(m[2] || '').toUpperCase(),
+        specialty: '',
+        production,
+      });
+    }
+
+    return out;
+  }
 
   function extractFromDoc(doc, frameUrl) {
     try {
@@ -490,13 +521,26 @@ function buildSalaryExtractScript() {
 
       const head = resolveMonthYear(doc);
       const tables = Array.from(doc.querySelectorAll('table'));
+      const trCount = doc.querySelectorAll('tr').length;
       let all = [];
       for (const t of tables) {
         const rows = parseRowsFromTable(t, head.month, head.year);
         if (rows.length) all = all.concat(rows);
       }
 
-      if (!all.length) return { ok: false, frameUrl, error: 'no se encontro tabla de jornales/primas', entries: [] };
+      if (!all.length) {
+        const byText = parseRowsFromText((doc.body && doc.body.innerText) || '', head.month, head.year);
+        if (byText.length) all = byText;
+      }
+
+      if (!all.length) {
+        return {
+          ok: false,
+          frameUrl,
+          error: 'no se encontro tabla de jornales/primas (tables=' + tables.length + ', tr=' + trCount + ')',
+          entries: [],
+        };
+      }
       return { ok: true, frameUrl, month: head.month, year: head.year, entries: all, source: head.source };
     } catch (e) {
       return { ok: false, frameUrl, error: String((e && e.message) || e), entries: [] };
