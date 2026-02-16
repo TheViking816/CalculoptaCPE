@@ -379,7 +379,7 @@ function extractorBody() {
   const snapshot = ok[0].snapshot;
 
   const last = localStorage.getItem('cpe_chapa_last') || '';
-  const rawInput = prompt('Introduce tu chapa (ej. 2683 o 72683):', last);
+  const rawInput = prompt('Introduce tu chapa (5 digitos o 72999):', last);
   if (rawInput === null) return;
 
   const chapa = String(rawInput || '').trim();
