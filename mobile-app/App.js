@@ -213,9 +213,11 @@ true;
 export default function App() {
   const webRef = useRef(null);
   const [chapa, setChapa] = useState('');
-  const [status, setStatus] = useState('Abre portal, inicia sesion y entra en Chapero por especialidades.');
+  const [status, setStatus] = useState('Listo.');
   const [calc, setCalc] = useState(null);
   const [url, setUrl] = useState(URL_HOME);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const [showResult, setShowResult] = useState(false);
   const topInset = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) : 0;
 
   const summary = useMemo(() => {
@@ -252,6 +254,7 @@ export default function App() {
     }
     setStatus('Calculando...');
     setCalc(null);
+    setShowResult(false);
     webRef.current?.injectJavaScript(buildCalcScript(trimmed));
   }
 
@@ -262,9 +265,11 @@ export default function App() {
       if (data.result && data.result.ok) {
         setCalc(data.result);
         setStatus('Calculo completado.');
+        setShowResult(true);
       } else {
         setCalc(data.result || null);
         setStatus('Error: ' + ((data.result && data.result.error) || 'No se pudo calcular'));
+        setShowResult(false);
       }
     } catch {
       setStatus('Respuesta invalida desde WebView.');
@@ -274,29 +279,6 @@ export default function App() {
   return (
     <SafeAreaView style={[styles.safe, { paddingTop: topInset }]}>
       <StatusBar style="dark" translucent={false} backgroundColor="#ffffff" />
-      <View style={styles.top}>
-        <Text style={styles.title}>Puertas CPE movil</Text>
-        <Text style={styles.subtitle}>Calcula directo en Chapero por especialidades</Text>
-        <View style={styles.row}>
-          <TextInput
-            style={styles.input}
-            value={chapa}
-            onChangeText={setChapa}
-            keyboardType="number-pad"
-            placeholder="Chapa (5 digitos o 72999)"
-          />
-        </View>
-        <View style={styles.rowButtons}>
-          <Pressable style={[styles.btn, styles.btnGhost]} onPress={openChapero}>
-            <Text style={styles.btnGhostText}>Ir Chapero</Text>
-          </Pressable>
-          <Pressable style={[styles.btn, styles.btnPrimary]} onPress={onCalcPress}>
-            <Text style={styles.btnPrimaryText}>Calcular</Text>
-          </Pressable>
-        </View>
-        <Text style={styles.status}>{status}</Text>
-      </View>
-
       <View style={styles.webWrap}>
         {Platform.OS === 'web' ? (
           <View style={styles.webInfo}>
@@ -318,10 +300,45 @@ export default function App() {
         )}
       </View>
 
-      <ScrollView style={styles.bottom} contentContainerStyle={{ paddingBottom: 16 }}>
-        {summary ? <Text style={styles.summary}>{summary}</Text> : null}
-        {calc && calc.ok ? (
-          <>
+      <Pressable style={styles.fab} onPress={() => setToolsOpen((v) => !v)}>
+        <Text style={styles.fabText}>{toolsOpen ? 'X' : 'CPE'}</Text>
+      </Pressable>
+
+      {toolsOpen ? (
+        <View style={styles.panel}>
+          <Text style={styles.panelTitle}>Puertas CPE</Text>
+          <TextInput
+            style={styles.input}
+            value={chapa}
+            onChangeText={setChapa}
+            keyboardType="number-pad"
+            placeholder="Chapa (5 digitos o 72999)"
+          />
+          <View style={styles.rowButtons}>
+            <Pressable style={[styles.btn, styles.btnGhost]} onPress={openChapero}>
+              <Text style={styles.btnGhostText}>Ir Chapero</Text>
+            </Pressable>
+            <Pressable style={[styles.btn, styles.btnPrimary]} onPress={onCalcPress}>
+              <Text style={styles.btnPrimaryText}>Calcular</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.status}>{status}</Text>
+          <Pressable style={styles.closeTools} onPress={() => setToolsOpen(false)}>
+            <Text style={styles.closeToolsText}>Cerrar panel</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {showResult && calc && calc.ok ? (
+        <View style={styles.resultCard}>
+          <View style={styles.resultHead}>
+            <Text style={styles.resultTitle}>Resultado</Text>
+            <Pressable onPress={() => setShowResult(false)}>
+              <Text style={styles.closeResult}>Cerrar</Text>
+            </Pressable>
+          </View>
+          {summary ? <Text style={styles.summary}>{summary}</Text> : null}
+          <ScrollView style={styles.resultList}>
             <View style={styles.rowHead}>
               <Text style={styles.colDoorHead}>Puerta</Text>
               <Text style={styles.colValueHead}>Chapa</Text>
@@ -337,19 +354,32 @@ export default function App() {
                 {r.error ? <Text style={styles.rowError}>{r.error}</Text> : null}
               </View>
             ))}
-          </>
-        ) : null}
-      </ScrollView>
+          </ScrollView>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#eef3fa' },
-  top: { paddingHorizontal: 14, paddingTop: 6, paddingBottom: 10, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#dbe3ef' },
-  title: { fontSize: 24, fontWeight: '800', color: '#0e2338' },
-  subtitle: { marginTop: 2, color: '#4f6279' },
-  row: { marginTop: 8 },
+  panel: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 80,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#dbe3ef',
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  panelTitle: { fontSize: 18, fontWeight: '800', color: '#0e2338', marginBottom: 8 },
   input: { backgroundColor: '#f7f9fd', borderWidth: 1, borderColor: '#cfdaea', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16 },
   rowButtons: { flexDirection: 'row', marginTop: 10, gap: 8 },
   btn: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
@@ -357,13 +387,44 @@ const styles = StyleSheet.create({
   btnGhost: { backgroundColor: '#e7effa', borderWidth: 1, borderColor: '#c7d7ee' },
   btnPrimaryText: { color: '#fff', fontWeight: '700' },
   btnGhostText: { color: '#0b4e8d', fontWeight: '700' },
-  status: { marginTop: 8, color: '#344e68' },
+  status: { marginTop: 8, color: '#344e68', fontSize: 13 },
+  closeTools: { marginTop: 8, alignSelf: 'flex-end' },
+  closeToolsText: { color: '#0b4e8d', fontWeight: '700' },
   webWrap: { flex: 1, minHeight: 280, borderTopWidth: 1, borderTopColor: '#dbe3ef' },
   webInfo: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   webInfoTitle: { fontSize: 20, fontWeight: '800', color: '#0f2a43', marginBottom: 10 },
   webInfoText: { textAlign: 'center', color: '#36516d', marginBottom: 6 },
-  bottom: { maxHeight: 260, backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#dbe3ef', paddingHorizontal: 12, paddingTop: 8 },
-  summary: { fontWeight: '700', color: '#0f2a43', marginBottom: 8 },
+  fab: {
+    position: 'absolute',
+    right: 14,
+    bottom: 14,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#0b5ea8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8,
+  },
+  fabText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  resultCard: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 80,
+    maxHeight: 300,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#dbe3ef',
+    borderRadius: 12,
+    padding: 12,
+    elevation: 8,
+  },
+  resultHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  resultTitle: { fontSize: 16, fontWeight: '800', color: '#0e2338' },
+  closeResult: { color: '#0b4e8d', fontWeight: '700' },
+  summary: { fontWeight: '700', color: '#0f2a43', marginBottom: 8, fontSize: 13 },
+  resultList: { maxHeight: 220 },
   rowHead: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#d8e2f1' },
   colDoorHead: { width: 90, fontWeight: '800', color: '#0f2a43' },
   colValueHead: { width: 90, fontWeight: '800', color: '#0f2a43' },
