@@ -3,6 +3,7 @@
   "routes": [
     { "src": "/", "dest": "/web/index.html" },
     { "src": "/instalar", "dest": "/web/instalar.html" },
+    { "src": "/CPEV.png", "dest": "/assets/CPEV.png" },
     { "src": "/styles.css", "dest": "/web/styles.css" },
     { "src": "/main.js", "dest": "/web/main.js" }
   ]
