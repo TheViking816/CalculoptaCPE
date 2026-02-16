@@ -431,10 +431,21 @@ function buildSalaryExtractScript() {
     const rows = Array.from(table.querySelectorAll('tr'));
     if (!rows.length) return [];
 
-    const headCells = Array.from(rows[0].querySelectorAll('th,td')).map((c) => normalizeText(c.textContent));
-    const hasJornada = headCells.some((h) => h.includes('JORNADA'));
-    const hasDia = headCells.some((h) => h === 'DIA' || h.includes(' DIA'));
-    if (!hasJornada || !hasDia) return [];
+    let headerIndex = -1;
+    let headCells = [];
+
+    for (let i = 0; i < Math.min(rows.length, 6); i += 1) {
+      const probe = Array.from(rows[i].querySelectorAll('th,td')).map((c) => normalizeText(c.textContent));
+      const hasJornada = probe.some((h) => h.includes('JORNADA'));
+      const hasDia = probe.some((h) => h === 'DIA' || h.includes(' DIA'));
+      if (hasJornada && hasDia) {
+        headerIndex = i;
+        headCells = probe;
+        break;
+      }
+    }
+
+    if (headerIndex < 0) return [];
 
     function idxBy(keys, fallback) {
       for (const k of keys) {
@@ -448,10 +459,10 @@ function buildSalaryExtractScript() {
     const iTipo = idxBy(['TIPO'], 3);
     const iJornada = idxBy(['JORNADA'], 4);
     const iSpecialty = idxBy(['ESPECIALIDAD'], 5);
-    const iProduccion = idxBy(['PRODUCCION'], 9);
+    const iProduccion = idxBy(['PRODUCCION'], -1);
 
     const out = [];
-    for (let r = 1; r < rows.length; r += 1) {
+    for (let r = headerIndex + 1; r < rows.length; r += 1) {
       const cells = Array.from(rows[r].querySelectorAll('td')).map((c) => String(c.textContent || '').trim());
       if (cells.length < 5) continue;
 
@@ -459,12 +470,14 @@ function buildSalaryExtractScript() {
       const shift = parseShift(cells[iJornada] || '');
       if (!Number.isInteger(day) || day < 1 || day > 31 || !shift) continue;
 
+      const productionCell = iProduccion >= 0 ? (cells[iProduccion] || '') : '';
+
       out.push({
         date: String(year) + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0'),
         shift,
         tipo: String(cells[iTipo] || '').toUpperCase(),
         specialty: String(cells[iSpecialty] || '').toUpperCase(),
-        production: parseMoney(cells[iProduccion] || ''),
+        production: parseMoney(productionCell),
       });
     }
 
