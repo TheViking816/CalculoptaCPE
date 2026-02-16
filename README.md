@@ -56,6 +56,17 @@ Deploy en Vercel:
 - Empaquetar ZIP:
   - `powershell -ExecutionPolicy Bypass -File .\extension\package-extension.ps1`
 
+## App movil (Android/iOS)
+- Carpeta: `mobile-app`
+- Ejecutar:
+  - `cd mobile-app`
+  - `npm install`
+  - `npm start`
+- Uso:
+  - Inicia sesion en el portal dentro de la app.
+  - Pulsa `Ir Chapero`.
+  - Introduce chapa y pulsa `Calcular`.
+
 ## Despliegue en Internet (sin depender de tu PC)
 Este proyecto **no es apto para Vercel** tal como esta porque usa Playwright con perfil de sesion persistente.
 

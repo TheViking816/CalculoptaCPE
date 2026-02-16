@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "Puertas CPE",
+    "slug": "puertas-cpe",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/CPEV.png",
+    "android": {
+      "package": "com.cpe.puertas"
+    },
+    "ios": {
+      "supportsTablet": true
+    }
+  }
+}
