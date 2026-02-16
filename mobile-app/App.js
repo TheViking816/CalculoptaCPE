@@ -241,6 +241,8 @@ export default function App() {
   function shouldBlockDownloadUrl(rawUrl) {
     const u = String(rawUrl || '').toLowerCase();
     if (!u) return false;
+    if (u.includes('/pdf/')) return true;
+    if (u.includes('/pdf/evaluaciones/')) return true;
     if (u.includes('.pdf')) return true;
     if (u.includes('.zip') || u.includes('.rar') || u.includes('.7z')) return true;
     if (u.includes('.xls') || u.includes('.xlsx') || u.includes('.csv')) return true;
@@ -272,6 +274,7 @@ export default function App() {
     if (!nextUrl) return;
     if (shouldBlockDownloadUrl(nextUrl)) {
       webRef.current?.stopLoading();
+      if (webRef.current?.goBack && navState?.canGoBack) webRef.current.goBack();
       setStatus('Descarga bloqueada en la app. Abre ese documento en navegador si lo necesitas.');
       if (lastSafeUrlRef.current) setUrl(lastSafeUrlRef.current);
       return;
@@ -286,6 +289,7 @@ export default function App() {
     const u = String(url || '').toLowerCase();
     if (!u) return false;
     return u.includes('.pdf') || u.includes('.zip') || u.includes('.rar') || u.includes('.7z') ||
+      u.includes('/pdf/') || u.includes('/pdf/evaluaciones/') ||
       u.includes('.xls') || u.includes('.xlsx') || u.includes('.csv') || u.includes('.doc') ||
       u.includes('.docx') || u.includes('/informe') || u.includes('attachment=') ||
       u.includes('content-disposition=') || u.includes('descarga') || u.includes('download');
@@ -313,7 +317,7 @@ true;
 
   function openChapero() {
     setStatus('Abriendo chapero...');
-    const target = `${URL_CHAPERO}&r=${Date.now()}`;
+    const target = URL_CHAPERO;
     setUrl(target);
     // Navigate inside current WebView context as primary path.
     webRef.current?.injectJavaScript(`
@@ -323,6 +327,11 @@ true;
       } catch (_) {}
       true;
     `);
+  }
+
+  function reloadCurrent() {
+    webRef.current?.reload();
+    setStatus('Recargando pagina...');
   }
 
   function openModuleUrl(moduleKey) {
@@ -388,6 +397,7 @@ true;
             thirdPartyCookiesEnabled
             javaScriptEnabled
             domStorageEnabled
+            pullToRefreshEnabled
             setSupportMultipleWindows={false}
             allowFileAccess={false}
             allowingReadAccessToURL={URL_HOME}
@@ -398,7 +408,7 @@ true;
       </View>
 
       <Pressable style={styles.fab} onPress={() => setToolsOpen((v) => !v)}>
-        <Text style={styles.fabText}>{toolsOpen ? 'X' : 'CPE'}</Text>
+        <Text style={styles.fabText}>{toolsOpen ? 'X' : '🛠️'}</Text>
       </Pressable>
 
       {toolsOpen ? (
@@ -442,6 +452,11 @@ true;
                 </Pressable>
                 <Pressable style={[styles.btn, styles.btnPrimary]} onPress={onCalcPress}>
                   <Text style={styles.btnPrimaryText}>Calcular</Text>
+                </Pressable>
+              </View>
+              <View style={styles.rowButtons}>
+                <Pressable style={[styles.btn, styles.btnGhost]} onPress={reloadCurrent}>
+                  <Text style={styles.btnGhostText}>Recargar</Text>
                 </Pressable>
               </View>
               <Text style={styles.status}>{status}</Text>
