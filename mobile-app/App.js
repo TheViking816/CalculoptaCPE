@@ -6,6 +6,12 @@ import { WebView } from 'react-native-webview';
 const URL_HOME = 'https://portal.cpevalencia.com/#Home';
 const URL_CHAPERO = 'https://portal.cpevalencia.com/#User,ViewNoray,8';
 
+const MODULES = {
+  PUERTAS: 'puertas',
+  SUELDO: 'sueldometro',
+  DESCANSOS: 'descansos',
+};
+
 function buildCalcScript(userInput) {
   const payload = JSON.stringify(String(userInput || ''));
   return `
@@ -218,6 +224,7 @@ export default function App() {
   const [url, setUrl] = useState(URL_HOME);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const [module, setModule] = useState(MODULES.PUERTAS);
   const topInset = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) : 0;
 
   const summary = useMemo(() => {
@@ -332,23 +339,60 @@ export default function App() {
 
       {toolsOpen ? (
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Puertas CPE</Text>
-          <TextInput
-            style={styles.input}
-            value={chapa}
-            onChangeText={setChapa}
-            keyboardType="number-pad"
-            placeholder="Chapa (5 digitos o 72999)"
-          />
-          <View style={styles.rowButtons}>
-            <Pressable style={[styles.btn, styles.btnGhost]} onPress={openChapero}>
-              <Text style={styles.btnGhostText}>Ir Chapero</Text>
+          <Text style={styles.panelTitle}>CPE Central</Text>
+          <Text style={styles.panelSub}>Acceso rapido a tus herramientas.</Text>
+
+          <View style={styles.modeTabs}>
+            <Pressable
+              style={[styles.modeTab, module === MODULES.PUERTAS ? styles.modeTabActive : null]}
+              onPress={() => setModule(MODULES.PUERTAS)}
+            >
+              <Text style={[styles.modeTabText, module === MODULES.PUERTAS ? styles.modeTabTextActive : null]}>Puertas</Text>
             </Pressable>
-            <Pressable style={[styles.btn, styles.btnPrimary]} onPress={onCalcPress}>
-              <Text style={styles.btnPrimaryText}>Calcular</Text>
+            <Pressable
+              style={[styles.modeTab, module === MODULES.SUELDO ? styles.modeTabActive : null]}
+              onPress={() => setModule(MODULES.SUELDO)}
+            >
+              <Text style={[styles.modeTabText, module === MODULES.SUELDO ? styles.modeTabTextActive : null]}>Sueldometro</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.modeTab, module === MODULES.DESCANSOS ? styles.modeTabActive : null]}
+              onPress={() => setModule(MODULES.DESCANSOS)}
+            >
+              <Text style={[styles.modeTabText, module === MODULES.DESCANSOS ? styles.modeTabTextActive : null]}>Descansos</Text>
             </Pressable>
           </View>
-          <Text style={styles.status}>{status}</Text>
+
+          {module === MODULES.PUERTAS ? (
+            <>
+              <TextInput
+                style={styles.input}
+                value={chapa}
+                onChangeText={setChapa}
+                keyboardType="number-pad"
+                placeholder="Chapa (5 digitos o 72999)"
+              />
+              <View style={styles.rowButtons}>
+                <Pressable style={[styles.btn, styles.btnGhost]} onPress={openChapero}>
+                  <Text style={styles.btnGhostText}>Ir Chapero</Text>
+                </Pressable>
+                <Pressable style={[styles.btn, styles.btnPrimary]} onPress={onCalcPress}>
+                  <Text style={styles.btnPrimaryText}>Calcular</Text>
+                </Pressable>
+              </View>
+              <Text style={styles.status}>{status}</Text>
+            </>
+          ) : (
+            <View style={styles.moduleCard}>
+              <Text style={styles.moduleCardTitle}>
+                {module === MODULES.SUELDO ? 'Sueldometro' : 'Descansos'}
+              </Text>
+              <Text style={styles.moduleCardText}>
+                Este modulo ira en app independiente para que funcione mejor y sin limites del portal embebido.
+              </Text>
+            </View>
+          )}
+
           <Pressable style={styles.closeTools} onPress={() => setToolsOpen(false)}>
             <Text style={styles.closeToolsText}>Cerrar panel</Text>
           </Pressable>
@@ -406,6 +450,20 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   panelTitle: { fontSize: 18, fontWeight: '800', color: '#0e2338', marginBottom: 8 },
+  panelSub: { color: '#526b85', fontSize: 13, marginBottom: 10 },
+  modeTabs: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  modeTab: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#eef3fb',
+    borderWidth: 1,
+    borderColor: '#d2deef',
+    alignItems: 'center',
+  },
+  modeTabActive: { backgroundColor: '#0b5ea8', borderColor: '#0b5ea8' },
+  modeTabText: { fontWeight: '700', color: '#2c4c6e', fontSize: 12 },
+  modeTabTextActive: { color: '#ffffff' },
   input: { backgroundColor: '#f7f9fd', borderWidth: 1, borderColor: '#cfdaea', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16 },
   rowButtons: { flexDirection: 'row', marginTop: 10, gap: 8 },
   btn: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
@@ -414,6 +472,16 @@ const styles = StyleSheet.create({
   btnPrimaryText: { color: '#fff', fontWeight: '700' },
   btnGhostText: { color: '#0b4e8d', fontWeight: '700' },
   status: { marginTop: 8, color: '#344e68', fontSize: 13 },
+  moduleCard: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d9e3f1',
+    backgroundColor: '#f8fbff',
+    padding: 12,
+    marginTop: 2,
+  },
+  moduleCardTitle: { fontSize: 16, fontWeight: '800', color: '#0f2a43', marginBottom: 4 },
+  moduleCardText: { color: '#4e6883', fontSize: 13, lineHeight: 18 },
   closeTools: { marginTop: 8, alignSelf: 'flex-end' },
   closeToolsText: { color: '#0b4e8d', fontWeight: '700' },
   webWrap: { flex: 1, minHeight: 280, borderTopWidth: 1, borderTopColor: '#dbe3ef' },
