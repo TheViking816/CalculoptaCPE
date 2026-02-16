@@ -465,6 +465,11 @@ async function copyText(value) {
 
 if (bookmarkletLink) {
   bookmarkletLink.href = buildBookmarkletHref();
+  bookmarkletLink.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    setStatus('Arrastra el boton "Puertas CPE" a la barra de "marcadores". No se instala haciendo clic.');
+    alert('Para instalarlo: arrastra "Puertas CPE" a la barra de "marcadores".');
+  });
 }
 
 function applyTheme(theme) {
