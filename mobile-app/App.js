@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { SafeAreaView, View, Text, TextInput, Pressable, StyleSheet, ScrollView, Platform, StatusBar as RNStatusBar } from 'react-native';
+import { SafeAreaView, View, Text, TextInput, Pressable, StyleSheet, ScrollView, Platform, StatusBar as RNStatusBar, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { WebView } from 'react-native-webview';
 
@@ -7,12 +7,8 @@ const URL_HOME = 'https://portal.cpevalencia.com/#Home';
 const URL_CHAPERO = 'https://portal.cpevalencia.com/#User,ViewNoray,8';
 const URL_SUELDO = 'https://misueldocpe.vercel.app/';
 const URL_DESCANSOS = 'https://descansos-cpe.vercel.app/';
-
-const MODULES = {
-  PUERTAS: 'puertas',
-  SUELDO: 'sueldometro',
-  DESCANSOS: 'descansos',
-};
+const ICON_SUELDO = require('./assets/misueldocpe.png');
+const ICON_DESCANSOS = require('./assets/descansos.png');
 
 function buildCalcScript(userInput) {
   const payload = JSON.stringify(String(userInput || ''));
@@ -226,8 +222,8 @@ export default function App() {
   const [calc, setCalc] = useState(null);
   const [url, setUrl] = useState(URL_HOME);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [showDoorQuick, setShowDoorQuick] = useState(false);
   const [showResult, setShowResult] = useState(false);
-  const [module, setModule] = useState(MODULES.PUERTAS);
   const topInset = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) : 0;
 
   const summary = useMemo(() => {
@@ -329,17 +325,12 @@ true;
     `);
   }
 
-  function reloadCurrent() {
-    webRef.current?.reload();
-    setStatus('Recargando pagina...');
-  }
-
-  function openModuleUrl(moduleKey) {
-    const target = moduleKey === MODULES.SUELDO ? URL_SUELDO : URL_DESCANSOS;
+  function openModuleUrl(target) {
     setUrl(target);
     lastSafeUrlRef.current = target;
     setStatus('Abriendo modulo...');
     setToolsOpen(false);
+    setShowDoorQuick(false);
   }
 
   function onCalcPress() {
@@ -407,83 +398,53 @@ true;
         )}
       </View>
 
-      <Pressable style={styles.fab} onPress={() => setToolsOpen((v) => !v)}>
-        <Text style={styles.fabText}>{toolsOpen ? 'X' : '🛠️'}</Text>
-      </Pressable>
-
       {toolsOpen ? (
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>CPE Central</Text>
-          <Text style={styles.panelSub}>Acceso rapido a tus herramientas.</Text>
-
-          <View style={styles.modeTabs}>
-            <Pressable
-              style={[styles.modeTab, module === MODULES.PUERTAS ? styles.modeTabActive : null]}
-              onPress={() => setModule(MODULES.PUERTAS)}
-            >
-              <Text style={[styles.modeTabText, module === MODULES.PUERTAS ? styles.modeTabTextActive : null]}>Puertas</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.modeTab, module === MODULES.SUELDO ? styles.modeTabActive : null]}
-              onPress={() => setModule(MODULES.SUELDO)}
-            >
-              <Text style={[styles.modeTabText, module === MODULES.SUELDO ? styles.modeTabTextActive : null]}>Sueldometro</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.modeTab, module === MODULES.DESCANSOS ? styles.modeTabActive : null]}
-              onPress={() => setModule(MODULES.DESCANSOS)}
-            >
-              <Text style={[styles.modeTabText, module === MODULES.DESCANSOS ? styles.modeTabTextActive : null]}>Descansos</Text>
-            </Pressable>
-          </View>
-
-          {module === MODULES.PUERTAS ? (
-            <>
-              <TextInput
-                style={styles.input}
-                value={chapa}
-                onChangeText={setChapa}
-                keyboardType="number-pad"
-                placeholder="Chapa (5 digitos o 72999)"
-              />
-              <View style={styles.rowButtons}>
-                <Pressable style={[styles.btn, styles.btnGhost]} onPress={openChapero}>
-                  <Text style={styles.btnGhostText}>Ir Chapero</Text>
-                </Pressable>
-                <Pressable style={[styles.btn, styles.btnPrimary]} onPress={onCalcPress}>
-                  <Text style={styles.btnPrimaryText}>Calcular</Text>
-                </Pressable>
-              </View>
-              <View style={styles.rowButtons}>
-                <Pressable style={[styles.btn, styles.btnGhost]} onPress={reloadCurrent}>
-                  <Text style={styles.btnGhostText}>Recargar</Text>
-                </Pressable>
-              </View>
-              <Text style={styles.status}>{status}</Text>
-            </>
-          ) : (
-            <View style={styles.moduleCard}>
-              <Text style={styles.moduleCardTitle}>
-                {module === MODULES.SUELDO ? 'Sueldometro' : 'Descansos'}
-              </Text>
-              <Text style={styles.moduleCardText}>
-                Acceso directo al modulo web.
-              </Text>
-              <Pressable
-                style={[styles.btn, styles.btnPrimary, { marginTop: 10 }]}
-                onPress={() => openModuleUrl(module)}
-              >
-                <Text style={styles.btnPrimaryText}>Abrir modulo</Text>
-              </Pressable>
-            </View>
-          )}
-
-          <Pressable style={styles.closeTools} onPress={() => setToolsOpen(false)}>
-            <Text style={styles.closeToolsText}>Cerrar panel</Text>
+        <View style={styles.quickActions}>
+          <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_SUELDO)}>
+            <Image source={ICON_SUELDO} style={styles.quickIcon} resizeMode="contain" />
+            <Text style={styles.quickLabel}>MiSueldoCPE</Text>
+          </Pressable>
+          <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_DESCANSOS)}>
+            <Image source={ICON_DESCANSOS} style={styles.quickIcon} resizeMode="contain" />
+            <Text style={styles.quickLabel}>DescansosCPE</Text>
+          </Pressable>
+          <Pressable style={styles.quickBubbleDoor} onPress={() => setShowDoorQuick((v) => !v)}>
+            <Text style={styles.quickDoorEmoji}>{'\uD83D\uDEAA'}</Text>
+            <Text style={styles.quickLabel}>Puertas</Text>
           </Pressable>
         </View>
       ) : null}
 
+      {showDoorQuick ? (
+        <View style={styles.doorMiniCard}>
+          <TextInput
+            style={styles.input}
+            value={chapa}
+            onChangeText={setChapa}
+            keyboardType="number-pad"
+            placeholder="Introduce chapa"
+          />
+          <View style={styles.rowButtons}>
+            <Pressable style={[styles.btn, styles.btnGhost]} onPress={openChapero}>
+              <Text style={styles.btnGhostText}>Ir Chapero</Text>
+            </Pressable>
+            <Pressable style={[styles.btn, styles.btnPrimary]} onPress={onCalcPress}>
+              <Text style={styles.btnPrimaryText}>Calcular</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+
+      <Pressable
+        style={styles.fab}
+        onPress={() => {
+          const next = !toolsOpen;
+          setToolsOpen(next);
+          if (!next) setShowDoorQuick(false);
+        }}
+      >
+        <Text style={styles.fabText}>{toolsOpen ? 'X' : '\uD83D\uDEE0\uFE0F'}</Text>
+      </Pressable>
       {showResult && calc && calc.ok ? (
         <View style={styles.resultCard}>
           <View style={styles.resultHead}>
@@ -518,61 +479,81 @@ true;
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#eef3fa' },
-  panel: {
+  webWrap: { flex: 1, minHeight: 280, borderTopWidth: 1, borderTopColor: '#dbe3ef' },
+  webInfo: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
+  webInfoTitle: { fontSize: 20, fontWeight: '800', color: '#0f2a43', marginBottom: 10 },
+  webInfoText: { textAlign: 'center', color: '#36516d', marginBottom: 6 },
+  quickActions: {
+    position: 'absolute',
+    right: 14,
+    bottom: 88,
+    width: 170,
+    gap: 8,
+  },
+  quickBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#dbe3ef',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.14,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 8,
+  },
+  quickBubbleDoor: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0b5ea8',
+    borderWidth: 1,
+    borderColor: '#0b5ea8',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.14,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 8,
+  },
+  quickIcon: { width: 24, height: 24, borderRadius: 6, marginRight: 8 },
+  quickDoorEmoji: { fontSize: 18, marginRight: 8 },
+  quickLabel: { color: '#0f2a43', fontWeight: '700', fontSize: 12, flex: 1 },
+  doorMiniCard: {
     position: 'absolute',
     left: 12,
     right: 12,
-    bottom: 80,
+    bottom: 86,
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#dbe3ef',
     borderRadius: 12,
-    padding: 12,
+    padding: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
     elevation: 8,
   },
-  panelTitle: { fontSize: 18, fontWeight: '800', color: '#0e2338', marginBottom: 8 },
-  panelSub: { color: '#526b85', fontSize: 13, marginBottom: 10 },
-  modeTabs: { flexDirection: 'row', gap: 8, marginBottom: 10 },
-  modeTab: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: '#eef3fb',
+  input: {
+    backgroundColor: '#f7f9fd',
     borderWidth: 1,
-    borderColor: '#d2deef',
-    alignItems: 'center',
+    borderColor: '#cfdaea',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
   },
-  modeTabActive: { backgroundColor: '#0b5ea8', borderColor: '#0b5ea8' },
-  modeTabText: { fontWeight: '700', color: '#2c4c6e', fontSize: 12 },
-  modeTabTextActive: { color: '#ffffff' },
-  input: { backgroundColor: '#f7f9fd', borderWidth: 1, borderColor: '#cfdaea', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16 },
   rowButtons: { flexDirection: 'row', marginTop: 10, gap: 8 },
   btn: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
   btnPrimary: { backgroundColor: '#0b5ea8' },
   btnGhost: { backgroundColor: '#e7effa', borderWidth: 1, borderColor: '#c7d7ee' },
   btnPrimaryText: { color: '#fff', fontWeight: '700' },
   btnGhostText: { color: '#0b4e8d', fontWeight: '700' },
-  status: { marginTop: 8, color: '#344e68', fontSize: 13 },
-  moduleCard: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#d9e3f1',
-    backgroundColor: '#f8fbff',
-    padding: 12,
-    marginTop: 2,
-  },
-  moduleCardTitle: { fontSize: 16, fontWeight: '800', color: '#0f2a43', marginBottom: 4 },
-  moduleCardText: { color: '#4e6883', fontSize: 13, lineHeight: 18 },
-  closeTools: { marginTop: 8, alignSelf: 'flex-end' },
-  closeToolsText: { color: '#0b4e8d', fontWeight: '700' },
-  webWrap: { flex: 1, minHeight: 280, borderTopWidth: 1, borderTopColor: '#dbe3ef' },
-  webInfo: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
-  webInfoTitle: { fontSize: 20, fontWeight: '800', color: '#0f2a43', marginBottom: 10 },
-  webInfoText: { textAlign: 'center', color: '#36516d', marginBottom: 6 },
   fab: {
     position: 'absolute',
     right: 14,
