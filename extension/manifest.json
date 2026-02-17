@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "CPE Distancia Puertas",
-  "description": "Calcula distancia por censo entre chapa usuario y puertas LAB/FES/NOC/NOC-FES en el chapero.",
-  "version": "1.1.0",
+  "name": "CPE Valencia Hub",
+  "description": "Burbuja de herramientas CPE dentro del portal con accesos directos y calculo de puertas.",
+  "version": "1.1.1",
   "permissions": [
     "activeTab",
     "scripting"
@@ -11,7 +11,7 @@
     "https://portal.cpevalencia.com/*"
   ],
   "action": {
-    "default_title": "CPE Distancia Puertas",
+    "default_title": "CPE Valencia Hub",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon-16.png",
