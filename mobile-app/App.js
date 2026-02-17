@@ -249,9 +249,13 @@ export default function App() {
     if (Platform.OS !== 'web') return false;
     try {
       const win = window.open(target, '_blank', 'noopener,noreferrer');
-      if (!win) window.location.href = target;
+      if (!win) {
+        setStatus('Tu navegador ha bloqueado la nueva pestana. Permite ventanas emergentes para esta web.');
+        return true;
+      }
     } catch {
-      window.location.href = target;
+      setStatus('No se pudo abrir la pestana nueva. Revisa bloqueo de popups.');
+      return true;
     }
     setStatus(statusText);
     setToolsOpen(false);
