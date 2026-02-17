@@ -6,6 +6,9 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "icon": "./assets/CPEV.png",
+    "web": {
+      "favicon": "./assets/CPEV.png"
+    },
     "android": {
       "package": "com.cpe.puertas"
     },

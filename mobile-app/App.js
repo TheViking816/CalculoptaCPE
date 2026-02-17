@@ -442,30 +442,43 @@ true;
     }
   }
 
+  function onCalcPressWebFallback() {
+    setStatus('En navegador no se puede leer chapero automaticamente. Usa la app Android para calcular puertas.');
+    setShowResult(false);
+  }
+
   return (
     <SafeAreaView style={[styles.safe, { paddingTop: topInset }]}>
       <StatusBar style="dark" translucent={false} backgroundColor="#ffffff" />
       <View style={styles.webWrap}>
-        <WebView
-          ref={webRef}
-          source={{ uri: url }}
-          onMessage={onMessage}
-          onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
-          onFileDownload={onFileDownload}
-          onNavigationStateChange={onNavChange}
-          sharedCookiesEnabled
-          thirdPartyCookiesEnabled
-          javaScriptEnabled
-          domStorageEnabled
-          pullToRefreshEnabled
-          setSupportMultipleWindows={false}
-          allowFileAccess={false}
-          allowingReadAccessToURL={URL_HOME}
-          injectedJavaScriptBeforeContentLoaded={getBlockDownloadsInjectedJs()}
-          originWhitelist={['*']}
-        />
+        {Platform.OS === 'web' ? (
+          <iframe
+            title="CPE Valencia Portal"
+            src={url}
+            style={{ width: '100%', height: '100%', border: '0', background: '#fff' }}
+            sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
+          />
+        ) : (
+          <WebView
+            ref={webRef}
+            source={{ uri: url }}
+            onMessage={onMessage}
+            onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
+            onFileDownload={onFileDownload}
+            onNavigationStateChange={onNavChange}
+            sharedCookiesEnabled
+            thirdPartyCookiesEnabled
+            javaScriptEnabled
+            domStorageEnabled
+            pullToRefreshEnabled
+            setSupportMultipleWindows={false}
+            allowFileAccess={false}
+            allowingReadAccessToURL={URL_HOME}
+            injectedJavaScriptBeforeContentLoaded={getBlockDownloadsInjectedJs()}
+            originWhitelist={['*']}
+          />
+        )}
       </View>
-
       {toolsOpen ? (
         <View style={styles.quickActions}>
           <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_SUELDO)}>
@@ -481,20 +494,20 @@ true;
             <Text style={styles.quickLabel}>Chapero especialidades</Text>
           </Pressable>
           <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_DOBLES)}>
-            <Text style={styles.quickDoorEmoji}>🔁</Text>
+            <Text style={styles.quickDoorEmoji}>{'\uD83D\uDD01'}</Text>
             <Text style={styles.quickLabel}>Solicitar Dobles</Text>
           </Pressable>
           <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_PEDIR_DESCANSOS)}>
-            <Text style={styles.quickDoorEmoji}>🌴</Text>
+            <Text style={styles.quickDoorEmoji}>{'\uD83C\uDF34'}</Text>
             <Text style={styles.quickLabel}>Solicitar Descansos</Text>
           </Pressable>
           <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_JORNALES)}>
-            <Text style={styles.quickDoorEmoji}>📋</Text>
+            <Text style={styles.quickDoorEmoji}>{'\uD83D\uDCCB'}</Text>
             <Text style={styles.quickLabel}>Consulta Jornales</Text>
           </Pressable>
           <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_DONDE_VOY)}>
-            <Text style={styles.quickDoorEmoji}>📍</Text>
-            <Text style={styles.quickLabel}>¿Donde voy?</Text>
+            <Text style={styles.quickDoorEmoji}>{'\uD83D\uDCCD'}</Text>
+            <Text style={styles.quickLabel}>�Donde voy?</Text>
           </Pressable>
         </View>
       ) : null}
@@ -512,7 +525,7 @@ true;
             <Pressable style={[styles.btn, styles.btnGhost]} onPress={openChapero}>
               <Text style={styles.btnGhostText}>Ir Chapero</Text>
             </Pressable>
-            <Pressable style={[styles.btn, styles.btnPrimary]} onPress={onCalcPress}>
+            <Pressable style={[styles.btn, styles.btnPrimary]} onPress={Platform.OS === 'web' ? onCalcPressWebFallback : onCalcPress}>
               <Text style={styles.btnPrimaryText}>Calcular</Text>
             </Pressable>
           </View>
@@ -529,6 +542,7 @@ true;
       >
         <Text style={styles.fabText}>{toolsOpen ? 'X' : '\uD83D\uDEE0\uFE0F'}</Text>
       </Pressable>
+
       {showResult && calc && calc.ok ? (
         <View style={styles.resultCard}>
           <View style={styles.resultHead}>
