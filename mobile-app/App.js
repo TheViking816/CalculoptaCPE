@@ -1,7 +1,6 @@
-import React, { useMemo, useRef, useState } from 'react';
+﻿import React, { useMemo, useRef, useState } from 'react';
 import { SafeAreaView, View, Text, TextInput, Pressable, StyleSheet, ScrollView, Platform, StatusBar as RNStatusBar, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { WebView } from 'react-native-webview';
 
 const URL_HOME = 'https://portal.cpevalencia.com/#Home';
 const URL_CHAPERO = 'https://portal.cpevalencia.com/#User,ViewNoray,8';
@@ -13,6 +12,7 @@ const URL_JORNALES = 'https://portal.cpevalencia.com/#User,ViewNoray,1';
 const URL_DONDE_VOY = 'https://portal.cpevalencia.com/#User,ViewNoray,0';
 const ICON_SUELDO = require('./assets/misueldocpe.png');
 const ICON_DESCANSOS = require('./assets/descansos.png');
+const WebViewComponent = Platform.OS === 'web' ? null : require('react-native-webview').WebView;
 
 function buildCalcScript(userInput) {
   const payload = JSON.stringify(String(userInput || ''));
@@ -244,6 +244,20 @@ export default function App() {
   const [showDoorQuick, setShowDoorQuick] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const topInset = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) : 0;
+  
+  function openExternalWebUrl(target, statusText) {
+    if (Platform.OS !== 'web') return false;
+    try {
+      const win = window.open(target, '_blank', 'noopener,noreferrer');
+      if (!win) window.location.href = target;
+    } catch {
+      window.location.href = target;
+    }
+    setStatus(statusText);
+    setToolsOpen(false);
+    setShowDoorQuick(false);
+    return true;
+  }
 
   const summary = useMemo(() => {
     if (!calc || !calc.ok) return null;
@@ -389,8 +403,12 @@ true;
   function openChapero() {
     setStatus('Abriendo chapero...');
     const target = URL_CHAPERO;
+
+    if (openExternalWebUrl(target, 'Chapero abierto para mantener sesion.')) {
+      return;
+    }
+
     setUrl(target);
-    // Navigate inside current WebView context as primary path.
     webRef.current?.injectJavaScript(`
       try {
         window.location.hash = '#User,ViewNoray,8';
@@ -401,6 +419,10 @@ true;
   }
 
   function openModuleUrl(target) {
+    if (openExternalWebUrl(target, 'Modulo abierto para mantener sesion.')) {
+      return;
+    }
+
     setUrl(target);
     lastSafeUrlRef.current = target;
     setStatus('Abriendo modulo...');
@@ -452,14 +474,12 @@ true;
       <StatusBar style="dark" translucent={false} backgroundColor="#ffffff" />
       <View style={styles.webWrap}>
         {Platform.OS === 'web' ? (
-          <iframe
-            title="CPE Valencia Portal"
-            src={url}
-            style={{ width: '100%', height: '100%', border: '0', background: '#fff' }}
-            sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
-          />
+          <View style={styles.webInfo}>
+            <Text style={styles.webInfoTitle}>Modo escritorio</Text>
+            <Text style={styles.webInfoText}>Usa las burbujas para abrir cada modulo en pestana nueva.</Text>
+          </View>
         ) : (
-          <WebView
+          <WebViewComponent
             ref={webRef}
             source={{ uri: url }}
             onMessage={onMessage}
@@ -507,7 +527,7 @@ true;
           </Pressable>
           <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_DONDE_VOY)}>
             <Text style={styles.quickDoorEmoji}>{'\uD83D\uDCCD'}</Text>
-            <Text style={styles.quickLabel}>�Donde voy?</Text>
+            <Text style={styles.quickLabel}>¿Donde voy?</Text>
           </Pressable>
         </View>
       ) : null}
@@ -695,3 +715,4 @@ const styles = StyleSheet.create({
   colValue: { width: 72, color: '#1e3a5c' },
   rowError: { color: '#a13a3a', marginBottom: 6, fontSize: 12 }
 });
+
