@@ -7,6 +7,10 @@ const URL_HOME = 'https://portal.cpevalencia.com/#Home';
 const URL_CHAPERO = 'https://portal.cpevalencia.com/#User,ViewNoray,8';
 const URL_SUELDO = 'https://misueldocpe.vercel.app/';
 const URL_DESCANSOS = 'https://descansos-cpe.vercel.app/';
+const URL_DOBLES = 'https://portal.cpevalencia.com/#User,ViewNoray,19';
+const URL_PEDIR_DESCANSOS = 'https://portal.cpevalencia.com/#User,ViewNoray,18';
+const URL_JORNALES = 'https://portal.cpevalencia.com/#User,ViewNoray,1';
+const URL_DONDE_VOY = 'https://portal.cpevalencia.com/#User,ViewNoray,0';
 const ICON_SUELDO = require('./assets/misueldocpe.png');
 const ICON_DESCANSOS = require('./assets/descansos.png');
 
@@ -153,13 +157,28 @@ function buildCalcScript(userInput) {
       return c;
     }
 
+    function countAllForwardCircularExclusive(fromIdx, toIdx) {
+      const n = snapshot.ordered.length;
+      if (!n || fromIdx === toIdx) return 0;
+      let c = 0;
+      for (let i = (fromIdx + 1) % n; i !== toIdx; i = (i + 1) % n) {
+        c += 1;
+      }
+      return c;
+    }
+
     const results = Object.entries(snapshot.doors).map(([door, doorChapa]) => {
       const doorKey = toCensoKey(doorChapa);
       const doorIdx = idx.get(doorKey);
       if (doorIdx === undefined) {
         return { door, doorChapa, distance: null, error: 'Puerta no encontrada en censo (' + doorKey + ')' };
       }
-      return { door, doorChapa, distance: countGrayForwardCircularExclusive(doorIdx, userIdx) };
+      return {
+        door,
+        doorChapa,
+        distance: countGrayForwardCircularExclusive(doorIdx, userIdx),
+        distanceAll: countAllForwardCircularExclusive(doorIdx, userIdx),
+      };
     });
 
     const ranked = results.filter((r) => Number.isFinite(r.distance)).sort((a, b) => a.distance - b.distance);
@@ -412,6 +431,22 @@ true;
             <Text style={styles.quickDoorEmoji}>{'\uD83D\uDEAA'}</Text>
             <Text style={styles.quickLabel}>Puertas</Text>
           </Pressable>
+          <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_DOBLES)}>
+            <Text style={styles.quickDoorEmoji}>🔁</Text>
+            <Text style={styles.quickLabel}>Solicitar Dobles</Text>
+          </Pressable>
+          <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_PEDIR_DESCANSOS)}>
+            <Text style={styles.quickDoorEmoji}>🌴</Text>
+            <Text style={styles.quickLabel}>Solicitar Descansos</Text>
+          </Pressable>
+          <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_JORNALES)}>
+            <Text style={styles.quickDoorEmoji}>📋</Text>
+            <Text style={styles.quickLabel}>Consulta Jornales</Text>
+          </Pressable>
+          <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_DONDE_VOY)}>
+            <Text style={styles.quickDoorEmoji}>📍</Text>
+            <Text style={styles.quickLabel}>¿Donde voy?</Text>
+          </Pressable>
         </View>
       ) : null}
 
@@ -458,7 +493,8 @@ true;
             <View style={styles.rowHead}>
               <Text style={styles.colDoorHead}>Puerta</Text>
               <Text style={styles.colValueHead}>Chapa</Text>
-              <Text style={styles.colValueHead}>Distancia</Text>
+              <Text style={styles.colValueHead}>No cont.</Text>
+              <Text style={styles.colValueHead}>Total</Text>
             </View>
             {calc.results.map((r) => (
               <View key={r.door}>
@@ -466,6 +502,7 @@ true;
                   <Text style={styles.colDoor}>{r.door}</Text>
                   <Text style={styles.colValue}>{r.doorChapa}</Text>
                   <Text style={styles.colValue}>{Number.isFinite(r.distance) ? r.distance : '-'}</Text>
+                  <Text style={styles.colValue}>{Number.isFinite(r.distanceAll) ? r.distanceAll : '-'}</Text>
                 </View>
                 {r.error ? <Text style={styles.rowError}>{r.error}</Text> : null}
               </View>
@@ -487,7 +524,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 14,
     bottom: 88,
-    width: 170,
+    width: 210,
     gap: 8,
   },
   quickBubble: {
@@ -522,7 +559,7 @@ const styles = StyleSheet.create({
   },
   quickIcon: { width: 24, height: 24, borderRadius: 6, marginRight: 8 },
   quickDoorEmoji: { fontSize: 18, marginRight: 8 },
-  quickLabel: { color: '#0f2a43', fontWeight: '700', fontSize: 12, flex: 1 },
+  quickLabel: { color: '#0f2a43', fontWeight: '700', fontSize: 11, flex: 1 },
   doorMiniCard: {
     position: 'absolute',
     left: 12,
@@ -586,10 +623,10 @@ const styles = StyleSheet.create({
   summary: { fontWeight: '700', color: '#0f2a43', marginBottom: 8, fontSize: 13 },
   resultList: { maxHeight: 220 },
   rowHead: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#d8e2f1' },
-  colDoorHead: { width: 90, fontWeight: '800', color: '#0f2a43' },
-  colValueHead: { width: 90, fontWeight: '800', color: '#0f2a43' },
+  colDoorHead: { width: 72, fontWeight: '800', color: '#0f2a43', fontSize: 12 },
+  colValueHead: { width: 72, fontWeight: '800', color: '#0f2a43', fontSize: 12 },
   rowResult: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#edf2f8' },
-  colDoor: { width: 90, fontWeight: '700', color: '#123151' },
-  colValue: { width: 90, color: '#1e3a5c' },
+  colDoor: { width: 72, fontWeight: '700', color: '#123151' },
+  colValue: { width: 72, color: '#1e3a5c' },
   rowError: { color: '#a13a3a', marginBottom: 6, fontSize: 12 }
 });
