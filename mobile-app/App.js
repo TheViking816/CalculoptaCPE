@@ -256,6 +256,8 @@ export default function App() {
   function shouldBlockDownloadUrl(rawUrl) {
     const u = String(rawUrl || '').toLowerCase();
     if (!u) return false;
+    if (u.startsWith('blob:')) return true;
+    if (u.startsWith('data:application/pdf')) return true;
     if (u.includes('/pdf/')) return true;
     if (u.includes('/pdf/evaluaciones/')) return true;
     if (u.includes('.pdf')) return true;
@@ -310,11 +312,26 @@ export default function App() {
       u.includes('content-disposition=') || u.includes('descarga') || u.includes('download');
   }
 
+  function blockedForNode(node, attr) {
+    try {
+      const v = node && node.getAttribute ? node.getAttribute(attr) : '';
+      return blocked(v);
+    } catch (_) { return false; }
+  }
+
   const oldOpen = window.open;
   window.open = function(url) {
     if (blocked(url)) return null;
     return oldOpen ? oldOpen.apply(window, arguments) : null;
   };
+
+  const oldAssign = window.location.assign ? window.location.assign.bind(window.location) : null;
+  if (oldAssign) {
+    window.location.assign = function(url) {
+      if (blocked(url)) return;
+      return oldAssign(url);
+    };
+  }
 
   document.addEventListener('click', function(e) {
     const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
@@ -325,6 +342,45 @@ export default function App() {
       e.stopPropagation();
     }
   }, true);
+
+  const oldFetch = window.fetch ? window.fetch.bind(window) : null;
+  if (oldFetch) {
+    window.fetch = function(input, init) {
+      const u = typeof input === 'string' ? input : (input && input.url) || '';
+      if (blocked(u)) return Promise.reject(new Error('blocked download'));
+      return oldFetch(input, init);
+    };
+  }
+
+  const oldXhrOpen = XMLHttpRequest && XMLHttpRequest.prototype && XMLHttpRequest.prototype.open;
+  if (oldXhrOpen) {
+    XMLHttpRequest.prototype.open = function(method, url) {
+      if (blocked(url)) throw new Error('blocked download');
+      return oldXhrOpen.apply(this, arguments);
+    };
+  }
+
+  function cleanupPdfNodes(root) {
+    const nodes = (root || document).querySelectorAll('iframe,embed,object,a[href]');
+    for (let i = 0; i < nodes.length; i += 1) {
+      const n = nodes[i];
+      const srcBlocked = blockedForNode(n, 'src');
+      const dataBlocked = blockedForNode(n, 'data');
+      const hrefBlocked = blockedForNode(n, 'href');
+      if (srcBlocked || dataBlocked || hrefBlocked) {
+        if (n.tagName === 'A') {
+          n.setAttribute('href', '#');
+        } else {
+          n.remove();
+        }
+      }
+    }
+  }
+
+  cleanupPdfNodes(document);
+  const mo = new MutationObserver(function() { cleanupPdfNodes(document); });
+  mo.observe(document.documentElement || document.body, { childList: true, subtree: true });
+  setInterval(function() { cleanupPdfNodes(document); }, 1200);
 })();
 true;
 `;
@@ -390,31 +446,24 @@ true;
     <SafeAreaView style={[styles.safe, { paddingTop: topInset }]}>
       <StatusBar style="dark" translucent={false} backgroundColor="#ffffff" />
       <View style={styles.webWrap}>
-        {Platform.OS === 'web' ? (
-          <View style={styles.webInfo}>
-            <Text style={styles.webInfoTitle}>Usa movil</Text>
-            <Text style={styles.webInfoText}>Esta app necesita WebView nativa para login y calculo.</Text>
-          </View>
-        ) : (
-          <WebView
-            ref={webRef}
-            source={{ uri: url }}
-            onMessage={onMessage}
-            onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
-            onFileDownload={onFileDownload}
-            onNavigationStateChange={onNavChange}
-            sharedCookiesEnabled
-            thirdPartyCookiesEnabled
-            javaScriptEnabled
-            domStorageEnabled
-            pullToRefreshEnabled
-            setSupportMultipleWindows={false}
-            allowFileAccess={false}
-            allowingReadAccessToURL={URL_HOME}
-            injectedJavaScriptBeforeContentLoaded={getBlockDownloadsInjectedJs()}
-            originWhitelist={['*']}
-          />
-        )}
+        <WebView
+          ref={webRef}
+          source={{ uri: url }}
+          onMessage={onMessage}
+          onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
+          onFileDownload={onFileDownload}
+          onNavigationStateChange={onNavChange}
+          sharedCookiesEnabled
+          thirdPartyCookiesEnabled
+          javaScriptEnabled
+          domStorageEnabled
+          pullToRefreshEnabled
+          setSupportMultipleWindows={false}
+          allowFileAccess={false}
+          allowingReadAccessToURL={URL_HOME}
+          injectedJavaScriptBeforeContentLoaded={getBlockDownloadsInjectedJs()}
+          originWhitelist={['*']}
+        />
       </View>
 
       {toolsOpen ? (
@@ -429,7 +478,7 @@ true;
           </Pressable>
           <Pressable style={styles.quickBubbleDoor} onPress={() => setShowDoorQuick((v) => !v)}>
             <Text style={styles.quickDoorEmoji}>{'\uD83D\uDEAA'}</Text>
-            <Text style={styles.quickLabel}>Puertas</Text>
+            <Text style={styles.quickLabel}>Chapero especialidades</Text>
           </Pressable>
           <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_DOBLES)}>
             <Text style={styles.quickDoorEmoji}>🔁</Text>
@@ -517,19 +566,20 @@ true;
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#eef3fa' },
   webWrap: { flex: 1, minHeight: 280, borderTopWidth: 1, borderTopColor: '#dbe3ef' },
-  webInfo: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
-  webInfoTitle: { fontSize: 20, fontWeight: '800', color: '#0f2a43', marginBottom: 10 },
-  webInfoText: { textAlign: 'center', color: '#36516d', marginBottom: 6 },
   quickActions: {
     position: 'absolute',
     right: 14,
     bottom: 88,
-    width: 210,
+    width: 320,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     gap: 8,
   },
   quickBubble: {
     flexDirection: 'row',
     alignItems: 'center',
+    width: 156,
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#dbe3ef',
@@ -545,6 +595,7 @@ const styles = StyleSheet.create({
   quickBubbleDoor: {
     flexDirection: 'row',
     alignItems: 'center',
+    width: 156,
     backgroundColor: '#0b5ea8',
     borderWidth: 1,
     borderColor: '#0b5ea8',
@@ -559,7 +610,7 @@ const styles = StyleSheet.create({
   },
   quickIcon: { width: 24, height: 24, borderRadius: 6, marginRight: 8 },
   quickDoorEmoji: { fontSize: 18, marginRight: 8 },
-  quickLabel: { color: '#0f2a43', fontWeight: '700', fontSize: 11, flex: 1 },
+  quickLabel: { color: '#0f2a43', fontWeight: '700', fontSize: 10, flex: 1 },
   doorMiniCard: {
     position: 'absolute',
     left: 12,
