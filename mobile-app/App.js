@@ -240,9 +240,10 @@ export default function App() {
   const [status, setStatus] = useState('Listo.');
   const [calc, setCalc] = useState(null);
   const [url, setUrl] = useState(URL_HOME);
-  const [toolsOpen, setToolsOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(Platform.OS === 'web');
   const [showDoorQuick, setShowDoorQuick] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const [webPanelUrl, setWebPanelUrl] = useState('');
   const topInset = Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) : 0;
   
   function openExternalWebUrl(target, statusText) {
@@ -407,6 +408,7 @@ true;
   function openChapero() {
     setStatus('Abriendo chapero...');
     const target = URL_CHAPERO;
+    if (Platform.OS === 'web') setWebPanelUrl('');
 
     if (openExternalWebUrl(target, 'Chapero abierto para mantener sesion.')) {
       return;
@@ -423,6 +425,14 @@ true;
   }
 
   function openModuleUrl(target) {
+    if (Platform.OS === 'web' && (target === URL_SUELDO || target === URL_DESCANSOS)) {
+      setWebPanelUrl(target);
+      setStatus('Modulo abierto dentro del hub web.');
+      setToolsOpen(true);
+      setShowDoorQuick(false);
+      return;
+    }
+
     if (openExternalWebUrl(target, 'Modulo abierto para mantener sesion.')) {
       return;
     }
@@ -479,8 +489,29 @@ true;
       <View style={styles.webWrap}>
         {Platform.OS === 'web' ? (
           <View style={styles.webInfo}>
-            <Text style={styles.webInfoTitle}>Modo escritorio</Text>
-            <Text style={styles.webInfoText}>Usa las burbujas para abrir cada modulo en pestana nueva.</Text>
+            <Text style={styles.webInfoTitle}>Hub CPE Valencia</Text>
+            {webPanelUrl ? (
+              <View style={styles.webPanel}>
+                <View style={styles.webPanelHeader}>
+                  <Text style={styles.webPanelTitle}>{webPanelUrl === URL_SUELDO ? 'MiSueldoCPE' : 'DescansosCPE'}</Text>
+                  <View style={styles.webPanelButtons}>
+                    <Pressable style={styles.webPanelBtn} onPress={() => openExternalWebUrl(webPanelUrl, 'Modulo abierto en pestana nueva.')}>
+                      <Text style={styles.webPanelBtnText}>Abrir fuera</Text>
+                    </Pressable>
+                    <Pressable style={styles.webPanelBtn} onPress={() => setWebPanelUrl('')}>
+                      <Text style={styles.webPanelBtnText}>Cerrar</Text>
+                    </Pressable>
+                  </View>
+                </View>
+                <iframe
+                  title="Modulo CPE"
+                  src={webPanelUrl}
+                  style={{ width: '100%', height: '100%', border: '0', borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}
+                />
+              </View>
+            ) : (
+              <Text style={styles.webInfoText}>Burbujas activas: abre modulos y vuelve al hub sin salir.</Text>
+            )}
           </View>
         ) : (
           <WebViewComponent
@@ -556,16 +587,18 @@ true;
         </View>
       ) : null}
 
-      <Pressable
-        style={styles.fab}
-        onPress={() => {
-          const next = !toolsOpen;
-          setToolsOpen(next);
-          if (!next) setShowDoorQuick(false);
-        }}
-      >
-        <Text style={styles.fabText}>{toolsOpen ? 'X' : '\uD83D\uDEE0\uFE0F'}</Text>
-      </Pressable>
+      {Platform.OS === 'web' ? null : (
+        <Pressable
+          style={styles.fab}
+          onPress={() => {
+            const next = !toolsOpen;
+            setToolsOpen(next);
+            if (!next) setShowDoorQuick(false);
+          }}
+        >
+          <Text style={styles.fabText}>{toolsOpen ? 'X' : '\uD83D\uDEE0\uFE0F'}</Text>
+        </Pressable>
+      )}
 
       {showResult && calc && calc.ok ? (
         <View style={styles.resultCard}>
@@ -604,6 +637,32 @@ true;
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#eef3fa' },
   webWrap: { flex: 1, minHeight: 280, borderTopWidth: 1, borderTopColor: '#dbe3ef' },
+  webInfo: { flex: 1, padding: 12 },
+  webInfoTitle: { fontSize: 22, fontWeight: '800', color: '#0f2a43', marginBottom: 8 },
+  webInfoText: { fontSize: 14, color: '#32506f' },
+  webPanel: {
+    flex: 1,
+    minHeight: 420,
+    borderWidth: 1,
+    borderColor: '#dbe3ef',
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#ffffff',
+  },
+  webPanelHeader: {
+    height: 46,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5ebf5',
+    backgroundColor: '#f6f9ff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  webPanelTitle: { fontWeight: '800', color: '#123151' },
+  webPanelButtons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  webPanelBtn: { backgroundColor: '#0b5ea8', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  webPanelBtnText: { color: '#ffffff', fontWeight: '700', fontSize: 12 },
   quickActions: {
     position: 'absolute',
     right: 14,
