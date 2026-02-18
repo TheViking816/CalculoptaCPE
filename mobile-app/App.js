@@ -10,9 +10,26 @@ const URL_DOBLES = 'https://portal.cpevalencia.com/#User,ViewNoray,19';
 const URL_PEDIR_DESCANSOS = 'https://portal.cpevalencia.com/#User,ViewNoray,18';
 const URL_JORNALES = 'https://portal.cpevalencia.com/#User,ViewNoray,1';
 const URL_DONDE_VOY = 'https://portal.cpevalencia.com/#User,ViewNoray,0';
+const URL_PRIMAS = 'https://portal.cpevalencia.com/#User,ViewNoray,2';
+const URL_CONTRATACION = 'https://portal.cpevalencia.com/#User,ViewNoray,9';
+const URL_PREVISION = 'https://portal.cpevalencia.com/#User,ViewNoray,12';
 const ICON_SUELDO = require('./assets/misueldocpe.png');
 const ICON_DESCANSOS = require('./assets/descansos.png');
 const WebViewComponent = Platform.OS === 'web' ? null : require('react-native-webview').WebView;
+const SESSION_CHECK_MS = 120000;
+
+const QUICK_ACTIONS = [
+  { key: 'donde-voy', label: '¿Donde voy?', emoji: '\uD83D\uDCCD', url: URL_DONDE_VOY },
+  { key: 'solicitar-dobles', label: 'Solicitar Dobles', emoji: '\uD83D\uDD01', url: URL_DOBLES },
+  { key: 'jornales', label: 'Consulta Jornales', emoji: '\uD83D\uDCCB', url: URL_JORNALES },
+  { key: 'solicitar-descansos', label: 'Solicitar Descansos', emoji: '\uD83C\uDF34', url: URL_PEDIR_DESCANSOS },
+  { key: 'primas', label: 'Consulta Primas', emoji: '\uD83D\uDCB0', url: URL_PRIMAS },
+  { key: 'prevision', label: 'Prevision', emoji: '\uD83D\uDCC5', url: URL_PREVISION },
+  { key: 'chapero', label: 'Chapero', emoji: '\uD83D\uDEAA', special: 'door' },
+  { key: 'sueldo', label: 'MiSueldoCPE', icon: ICON_SUELDO, url: URL_SUELDO },
+  { key: 'contratacion', label: 'Contratacion', emoji: '\uD83E\uDDFE', url: URL_CONTRATACION },
+  { key: 'descansos', label: 'DescansosCPE', icon: ICON_DESCANSOS, url: URL_DESCANSOS },
+];
 
 function buildCalcScript(userInput) {
   const payload = JSON.stringify(String(userInput || ''));
@@ -308,6 +325,10 @@ export default function App() {
   function onNavChange(navState) {
     const nextUrl = String((navState && navState.url) || '');
     if (!nextUrl) return;
+    const lower = nextUrl.toLowerCase();
+    if (lower.includes('login') || lower.includes('logout')) {
+      setStatus('Sesion no valida. Inicia sesion para recuperar datos.');
+    }
     if (shouldBlockDownloadUrl(nextUrl)) {
       webRef.current?.stopLoading();
       if (webRef.current?.goBack && navState?.canGoBack) webRef.current.goBack();
@@ -321,6 +342,14 @@ export default function App() {
   function getBlockDownloadsInjectedJs() {
     return `
 (() => {
+  if (window.__cpeBridgeInstalled) return;
+  window.__cpeBridgeInstalled = true;
+
+  function postMessage(type, payload) {
+    if (!window.ReactNativeWebView || !window.ReactNativeWebView.postMessage) return;
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type, ...(payload || {}) }));
+  }
+
   function blocked(url) {
     const u = String(url || '').toLowerCase();
     if (!u) return false;
@@ -400,6 +429,72 @@ export default function App() {
   const mo = new MutationObserver(function() { cleanupPdfNodes(document); });
   mo.observe(document.documentElement || document.body, { childList: true, subtree: true });
   setInterval(function() { cleanupPdfNodes(document); }, 1200);
+
+  function checkSession() {
+    const text = ((document.body && document.body.innerText) || '').toLowerCase();
+    const href = String(window.location && window.location.href || '').toLowerCase();
+    const expired = href.includes('login') || href.includes('logout') ||
+      text.includes('iniciar sesion') || text.includes('sesion expirada') ||
+      text.includes('sesion caducada');
+    if (expired) {
+      postMessage('sessionExpired');
+      return;
+    }
+    if (window.location && window.location.hostname && window.location.hostname.includes('portal.cpevalencia.com')) {
+      fetch(window.location.origin + '/', { method: 'GET', credentials: 'include', cache: 'no-store' }).catch(function(){});
+    }
+  }
+
+  setInterval(checkSession, ${SESSION_CHECK_MS});
+  checkSession();
+
+  let startY = null;
+  let startAtTop = false;
+  let startAtBottom = false;
+  let refreshLockMs = 0;
+
+  function scrollPos() {
+    return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+  }
+
+  function maxScrollPos() {
+    const root = document.documentElement || document.body;
+    const body = document.body || { scrollHeight: 0 };
+    const maxHeight = Math.max(root ? root.scrollHeight : 0, body.scrollHeight || 0);
+    return Math.max(0, maxHeight - window.innerHeight);
+  }
+
+  function requestRefresh(source) {
+    const now = Date.now();
+    if (now - refreshLockMs < 1500) return;
+    refreshLockMs = now;
+    postMessage('refreshRequest', { source: source || 'gesture' });
+  }
+
+  document.addEventListener('touchstart', function(e) {
+    const touch = e.touches && e.touches[0];
+    startY = touch ? touch.clientY : null;
+    const top = scrollPos();
+    const bottom = maxScrollPos() - top;
+    startAtTop = top <= 2;
+    startAtBottom = bottom <= 2;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e) {
+    if (startY === null) return;
+    const touch = e.touches && e.touches[0];
+    if (!touch) return;
+    const delta = touch.clientY - startY;
+    if (startAtTop && delta > 110) {
+      startY = null;
+      requestRefresh('pullDownTop');
+      return;
+    }
+    if (startAtBottom && delta < -110) {
+      startY = null;
+      requestRefresh('pullUpBottom');
+    }
+  }, { passive: true });
 })();
 true;
 `;
@@ -444,6 +539,25 @@ true;
     setShowDoorQuick(false);
   }
 
+  function reloadPortal(reason = 'Recargando pagina...') {
+    if (Platform.OS === 'web') {
+      if (webPanelUrl) {
+        setWebPanelUrl((current) => {
+          if (!current) return '';
+          const joiner = current.includes('?') ? '&' : '?';
+          return `${current}${joiner}_reload=${Date.now()}`;
+        });
+      } else if (typeof window !== 'undefined' && window.location) {
+        window.location.reload();
+      }
+      setStatus(reason);
+      return;
+    }
+    webRef.current?.reload();
+    setStatus(reason);
+    setShowResult(false);
+  }
+
   function onCalcPress() {
     if (Platform.OS === 'web') {
       setStatus('Usa Android/iOS para calcular. El modo web es solo visual.');
@@ -463,15 +577,24 @@ true;
   function onMessage(ev) {
     try {
       const data = JSON.parse(ev.nativeEvent.data);
-      if (data.type !== 'calc') return;
-      if (data.result && data.result.ok) {
-        setCalc(data.result);
-        setStatus('Calculo completado.');
-        setShowResult(true);
-      } else {
-        setCalc(data.result || null);
-        setStatus('Error: ' + ((data.result && data.result.error) || 'No se pudo calcular'));
-        setShowResult(false);
+      if (data.type === 'refreshRequest') {
+        reloadPortal('Recarga solicitada por gesto de scroll.');
+        return;
+      }
+      if (data.type === 'sessionExpired') {
+        setStatus('Sesion caducada detectada. Vuelve a iniciar sesion en el portal.');
+        return;
+      }
+      if (data.type === 'calc') {
+        if (data.result && data.result.ok) {
+          setCalc(data.result);
+          setStatus('Calculo completado.');
+          setShowResult(true);
+        } else {
+          setCalc(data.result || null);
+          setStatus('Error: ' + ((data.result && data.result.error) || 'No se pudo calcular'));
+          setShowResult(false);
+        }
       }
     } catch {
       setStatus('Respuesta invalida desde WebView.');
@@ -536,34 +659,26 @@ true;
       </View>
       {toolsOpen ? (
         <View style={styles.quickActions}>
-          <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_SUELDO)}>
-            <Image source={ICON_SUELDO} style={styles.quickIcon} resizeMode="contain" />
-            <Text style={styles.quickLabel}>MiSueldoCPE</Text>
-          </Pressable>
-          <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_DESCANSOS)}>
-            <Image source={ICON_DESCANSOS} style={styles.quickIcon} resizeMode="contain" />
-            <Text style={styles.quickLabel}>DescansosCPE</Text>
-          </Pressable>
-          <Pressable style={styles.quickBubbleDoor} onPress={() => setShowDoorQuick((v) => !v)}>
-            <Text style={styles.quickDoorEmoji}>{'\uD83D\uDEAA'}</Text>
-            <Text style={styles.quickLabel}>Chapero especialidades</Text>
-          </Pressable>
-          <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_DOBLES)}>
-            <Text style={styles.quickDoorEmoji}>{'\uD83D\uDD01'}</Text>
-            <Text style={styles.quickLabel}>Solicitar Dobles</Text>
-          </Pressable>
-          <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_PEDIR_DESCANSOS)}>
-            <Text style={styles.quickDoorEmoji}>{'\uD83C\uDF34'}</Text>
-            <Text style={styles.quickLabel}>Solicitar Descansos</Text>
-          </Pressable>
-          <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_JORNALES)}>
-            <Text style={styles.quickDoorEmoji}>{'\uD83D\uDCCB'}</Text>
-            <Text style={styles.quickLabel}>Consulta Jornales</Text>
-          </Pressable>
-          <Pressable style={styles.quickBubble} onPress={() => openModuleUrl(URL_DONDE_VOY)}>
-            <Text style={styles.quickDoorEmoji}>{'\uD83D\uDCCD'}</Text>
-            <Text style={styles.quickLabel}>¿Donde voy?</Text>
-          </Pressable>
+          {QUICK_ACTIONS.map((action) => (
+            <Pressable
+              key={action.key}
+              style={action.special === 'door' ? styles.quickBubbleDoor : styles.quickBubble}
+              onPress={() => {
+                if (action.special === 'door') {
+                  setShowDoorQuick((v) => !v);
+                  return;
+                }
+                openModuleUrl(action.url);
+              }}
+            >
+              {action.icon ? (
+                <Image source={action.icon} style={styles.quickIcon} resizeMode="contain" />
+              ) : (
+                <Text style={styles.quickDoorEmoji}>{action.emoji}</Text>
+              )}
+              <Text style={action.special === 'door' ? styles.quickLabelDoor : styles.quickLabel}>{action.label}</Text>
+            </Pressable>
+          ))}
         </View>
       ) : null}
 
@@ -586,6 +701,12 @@ true;
           </View>
         </View>
       ) : null}
+
+      {Platform.OS === 'web' ? null : (
+        <Pressable style={styles.reloadFab} onPress={() => reloadPortal('Recargando pagina del portal...')}>
+          <Text style={styles.reloadFabText}>{'\u21BB'}</Text>
+        </Pressable>
+      )}
 
       {Platform.OS === 'web' ? null : (
         <Pressable
@@ -708,6 +829,7 @@ const styles = StyleSheet.create({
   quickIcon: { width: 24, height: 24, borderRadius: 6, marginRight: 8 },
   quickDoorEmoji: { fontSize: 18, marginRight: 8 },
   quickLabel: { color: '#0f2a43', fontWeight: '700', fontSize: 10, flex: 1 },
+  quickLabelDoor: { color: '#ffffff', fontWeight: '700', fontSize: 10, flex: 1 },
   doorMiniCard: {
     position: 'absolute',
     left: 12,
@@ -752,6 +874,21 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   fabText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  reloadFab: {
+    position: 'absolute',
+    right: 86,
+    bottom: 18,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#c8d8ec',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 7,
+  },
+  reloadFabText: { color: '#0b5ea8', fontWeight: '900', fontSize: 22, marginTop: -1 },
   resultCard: {
     position: 'absolute',
     left: 12,
